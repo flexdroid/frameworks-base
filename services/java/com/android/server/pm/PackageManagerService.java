@@ -5569,6 +5569,50 @@ public class PackageManagerService extends IPackageManager.Stub {
             }
         }
 
+        if (pkg.sandboxes.size() > 0) {
+            gp.sandboxes = new HashMap<String, HashSet<String>>();
+            /*
+             * jaebaek: Note that exceptions are not handled
+             * */
+            for (PackageParser.Sandbox sbox: pkg.sandboxes) {
+                final int NN = sbox.requestedPermissions.size();
+                if (NN > 0) {
+                    HashSet<String> grantedPermissionsForSandbox
+                        = new HashSet<String>();
+                    for (int i=0; i<NN; i++) {
+                        final String name = sbox.requestedPermissions.get(i);
+                        final BasePermission bp = mSettings.mPermissions.get(name);
+                        boolean allowed = true;
+                        if (bp != null) {
+                            final String perm = bp.name;
+                            if ((ps.pkgFlags&ApplicationInfo.FLAG_SYSTEM) == 0
+                                    && ps.permissionsFixed) {
+                                // If this is an existing, non-system package, then
+                                // we can't add any new permissions to it.
+                                //
+                                // jaebaek: If we use sandbox tag only at the first
+                                // time of installing, it will not be called.
+                                // Because, permissionsFixed is FALSE.
+                            }
+                            if (allowed) {
+                                if (!grantedPermissionsForSandbox.contains(perm)) {
+                                    // jaebaek: add perm to this sandbox
+                                    grantedPermissionsForSandbox.add(perm);
+                                }
+                            } else {
+                                Slog.w(TAG, "Not granting permission " + perm
+                                        + " to package " + pkg.packageName
+                                        + " because it was previously installed without");
+                            }
+                        }
+                    }
+                    gp.sandboxes.put(sbox.sandboxName, grantedPermissionsForSandbox);
+                } else {
+                    gp.sandboxes.put(sbox.sandboxName, null);
+                }
+            }
+        }
+
         if ((changedPermission || replace) && !ps.permissionsFixed &&
                 !isSystemApp(ps) || isUpdatedSystemApp(ps)){
             // This is the first that we have heard about this package, so the

@@ -17390,6 +17390,7 @@ package android.os {
     method public void dumpAsync(java.io.FileDescriptor, java.lang.String[]);
     method public static final void flushPendingCommands();
     method public static final int getCallingPid();
+    method public static final int getCallingThreadId();
     method public static final int getCallingUid();
     method public static final android.os.UserHandle getCallingUserHandle();
     method public java.lang.String getInterfaceDescriptor();
@@ -21790,7 +21791,7 @@ package android.renderscript {
   }
 
   public class BaseObj {
-    method public synchronized void destroy();
+    method public void destroy();
     method public java.lang.String getName();
     method public void setName(java.lang.String);
   }

@@ -1065,6 +1065,10 @@ public class PackageParser {
                 if (parsePermissionTree(pkg, res, parser, attrs, outError) == null) {
                     return null;
                 }
+            } else if (tagName.equals("sandbox")) {
+                if (!parseSandbox(pkg, res, parser, attrs, outError)) {
+                    return null;
+                }
             } else if (tagName.equals("uses-permission")) {
                 if (!parseUsesPermission(pkg, res, parser, attrs, outError)) {
                     return null;
@@ -1798,6 +1802,53 @@ public class PackageParser {
         owner.permissions.add(perm);
 
         return perm;
+    }
+
+    private boolean parseSandbox(Package owner, Resources res,
+            XmlPullParser parser, AttributeSet attrs, String[] outError)
+        throws XmlPullParserException, IOException {
+        Sandbox sbox = new Sandbox();
+
+        TypedArray sa = res.obtainAttributes(attrs,
+                com.android.internal.R.styleable.AndroidManifestSandbox);
+
+        sbox.sandboxName = sa.getNonResourceString(
+                com.android.internal.R.styleable.AndroidManifestSandbox_name);
+
+        sa.recycle();
+
+        if (sbox.sandboxName == null) {
+            mParseError = PackageManager.INSTALL_PARSE_FAILED_MANIFEST_MALFORMED;
+            return false;
+        }
+
+        final int innerDepth = parser.getDepth();
+
+        int type;
+        while ((type = parser.next()) != XmlPullParser.END_DOCUMENT
+                && (type != XmlPullParser.END_TAG || parser.getDepth() > innerDepth)) {
+            if (parser.getName().equals("sandbox-uses-permission")) {
+                sa = res.obtainAttributes(attrs,
+                        com.android.internal.R.styleable.AndroidManifestSandboxUsesPermission);
+
+                String name = sa.getNonResourceString(
+                        com.android.internal.R.styleable.AndroidManifestSandboxUsesPermission_name);
+
+                sa.recycle();
+
+                if (name != null && !sbox.requestedPermissions.contains(name)) {
+                    sbox.requestedPermissions.add(name.intern());
+                }
+            } else {
+                Slog.w(TAG, "Unknown element under <sandbox>: " + parser.getName()
+                        + " at " + mArchiveSourcePath + " "
+                        + parser.getPositionDescription());
+            }
+            XmlUtils.skipCurrentTag(parser);
+        }
+
+        owner.sandboxes.add(sbox);
+        return true;
     }
 
     private Instrumentation parseInstrumentation(Package owner, Resources res,
@@ -3441,6 +3492,11 @@ public class PackageParser {
         return true;
     }
 
+    public final static class Sandbox {
+        public String sandboxName;
+        public final ArrayList<String> requestedPermissions = new ArrayList<String>();
+    }
+
     public final static class Package {
 
         public String packageName;
@@ -3455,6 +3511,7 @@ public class PackageParser {
         public final ArrayList<Provider> providers = new ArrayList<Provider>(0);
         public final ArrayList<Service> services = new ArrayList<Service>(0);
         public final ArrayList<Instrumentation> instrumentation = new ArrayList<Instrumentation>(0);
+        public final ArrayList<Sandbox> sandboxes = new ArrayList<Sandbox>(0);
 
         public final ArrayList<String> requestedPermissions = new ArrayList<String>();
         public final ArrayList<Boolean> requestedPermissionsRequired = new ArrayList<Boolean>();
