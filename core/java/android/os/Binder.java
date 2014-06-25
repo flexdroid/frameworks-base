@@ -70,6 +70,12 @@ public class Binder implements IBinder {
     public static final native int getCallingPid();
     
     /**
+     * jaebaek: Return the ID of the thread that sent you the current transaction
+     * that is being processed.
+     */
+    public static final native int getCallingThreadId();
+
+    /**
      * Return the Linux uid assigned to the process that sent you the
      * current transaction that is being processed.  This uid can be used with
      * higher-level system services to determine its identity and check
