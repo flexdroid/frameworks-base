@@ -5593,7 +5593,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                                 // jaebaek: If we use sandbox tag only at the first
                                 // time of installing, it will not be called.
                                 // Because, permissionsFixed is FALSE.
-                                    }
+                            }
                             if (allowed) {
                                 if (!grantedPermissionsForSandbox.contains(perm)) {
                                     // jaebaek: add perm to this sandbox
