@@ -1063,6 +1063,14 @@
         -->
     </declare-styleable>
 
+    <declare-styleable name="AndroidManifestSandbox" parent="AndroidManifest">
+        <attr name="name" />
+    </declare-styleable>
+
+    <declare-styleable name="AndroidManifestSandboxUsesPermission" parent="AndroidManifestSandbox">
+        <attr name="name" />
+    </declare-styleable>
+
     <!-- The <code>uses-configuration</code> tag specifies
          a specific hardware configuration value used by the application.
          For example an application might specify that it requires
