@@ -34,6 +34,7 @@ import android.util.DisplayMetrics;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Class for retrieving various kinds of information related to the application
@@ -1749,6 +1750,11 @@ public abstract class PackageManager {
      * @see #PERMISSION_DENIED
      */
     public abstract int checkPermission(String permName, String pkgName);
+
+    /**
+     * jaebaek: to check out sandbox information
+     */
+    public abstract Map getAllSandbox(int uid);
 
     /**
      * Add a new dynamic permission to the system.  For this to work, your

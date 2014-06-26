@@ -60,6 +60,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /*package*/
 final class ApplicationPackageManager extends PackageManager {
@@ -318,6 +319,15 @@ final class ApplicationPackageManager extends PackageManager {
     public int checkPermission(String permName, String pkgName) {
         try {
             return mPM.checkPermission(permName, pkgName);
+        } catch (RemoteException e) {
+            throw new RuntimeException("Package manager has died", e);
+        }
+    }
+
+    @Override
+    public Map getAllSandbox(int uid) {
+        try {
+            return mPM.getAllSandbox(uid);
         } catch (RemoteException e) {
             throw new RuntimeException("Package manager has died", e);
         }

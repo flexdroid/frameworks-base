@@ -80,6 +80,8 @@ interface IPackageManager {
     ProviderInfo getProviderInfo(in ComponentName className, int flags, int userId);
 
     int checkPermission(String permName, String pkgName);
+
+    Map getAllSandbox(int uid);
     
     int checkUidPermission(String permName, int uid);
     

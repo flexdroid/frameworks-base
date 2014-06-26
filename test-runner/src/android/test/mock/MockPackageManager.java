@@ -50,6 +50,7 @@ import android.os.RemoteException;
 import android.os.UserHandle;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * A mock {@link android.content.pm.PackageManager} class.  All methods are non-functional and throw
@@ -163,6 +164,11 @@ public class MockPackageManager extends PackageManager {
 
     @Override
     public int checkPermission(String permName, String pkgName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Map getAllSandbox(int uid) {
         throw new UnsupportedOperationException();
     }
 

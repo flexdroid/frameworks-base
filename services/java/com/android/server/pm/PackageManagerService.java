@@ -2198,6 +2198,37 @@ public class PackageManagerService extends IPackageManager.Stub {
         return PackageManager.PERMISSION_DENIED;
     }
 
+    public HashMap<String, ArrayList<String>> getAllSandbox(int uid) {
+        HashMap<String, ArrayList<String>> ret = null;
+        synchronized (mPackages) {
+            Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
+            if (obj != null) {
+                GrantedPermissions gp = (GrantedPermissions)obj;
+                if (gp.grantedPermissions != null) {
+                    ArrayList<String> l = new ArrayList<String>();
+                    for (String perm : gp.grantedPermissions) {
+                        l.add(perm);
+                    }
+                    ret.put("", l);
+                }
+                if (gp.sandboxes != null) {
+                    ret = new HashMap<String, ArrayList<String>>();
+                    for(String name : gp.sandboxes.keySet()){
+                        HashSet<String> sb = gp.sandboxes.get(name);
+                        if (sb != null && !sb.isEmpty()) {
+                            ArrayList<String> l = new ArrayList<String>();
+                            for (String perm : sb) {
+                                l.add(perm);
+                            }
+                            ret.put(name, l);
+                        }
+                    }
+                }
+            }
+        }
+        return ret;
+    }
+
     public int checkUidPermission(String permName, int uid) {
         synchronized (mPackages) {
             Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
