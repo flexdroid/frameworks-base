@@ -43,6 +43,7 @@ import com.android.server.EventLogTags;
 import com.android.server.IntentResolver;
 
 import com.android.server.Watchdog;
+import org.apache.harmony.dalvik.ddmc.DdmVmInternal;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlSerializer;
@@ -2198,6 +2199,91 @@ public class PackageManagerService extends IPackageManager.Stub {
         return PackageManager.PERMISSION_DENIED;
     }
 
+    /*
+     * jaebaek: check whether method contains prefix as its prefix.
+     *
+     * For example, "com.test.asdf" has "com", "com.test", "com.test.asdf"
+     * as its prefixes.
+     */
+    private boolean isPrefixOfMethod(String method, String prefix) {
+        String [] methodTokens = method.split("\\.");
+        String [] prefixTokens = prefix.split("\\.");
+
+        if (prefixTokens.length > methodTokens.length)
+            return false;
+
+        for (int i = 0;i < prefixTokens.length;++i) {
+            if (!prefixTokens[i].equals(methodTokens[i]))
+                return false;
+        }
+        return true;
+    }
+
+    private HashSet<String> getSandbox(int uid, int tid) {
+        HashSet<String> ret = null;
+        synchronized (mPackages) {
+            Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
+            if (obj != null) {
+                GrantedPermissions gp = (GrantedPermissions)obj;
+                if (gp.sandboxes != null) {
+                    StackTraceElement[] trace = DdmVmInternal.getStackTraceBySysTid(tid);
+                    if (trace != null) {
+                        for(StackTraceElement elem : trace){
+                            String method = elem.getClassName()+"."+elem.getMethodName();
+                            for(String name : gp.sandboxNames){
+                                if (isPrefixOfMethod(method, name)) {
+                                    if (ret == null)
+                                        ret = new HashSet<String>(gp.sandboxes.get(name));
+                                    else
+                                        ret.retainAll(gp.sandboxes.get(name));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    ret = gp.grantedPermissions;
+                }
+            }
+        }
+        return ret;
+    }
+
+    private HashSet<Integer> getSandboxGids(int uid, int tid) {
+        HashSet<Integer> ret = null;
+        synchronized (mPackages) {
+            Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
+            if (obj != null) {
+                GrantedPermissions gp = (GrantedPermissions)obj;
+                if (gp.sandboxGidMap != null) {
+                    StackTraceElement[] trace = DdmVmInternal.getStackTraceBySysTid(tid);
+                    if (trace != null) {
+                        for(StackTraceElement elem : trace){
+                            String method = elem.getClassName()+"."+elem.getMethodName();
+                            for(String name : gp.sandboxNames){
+                                if (isPrefixOfMethod(method, name)) {
+                                    if (ret == null)
+                                        ret = new HashSet<Integer>(gp.sandboxGidMap.get(name));
+                                    else
+                                        ret.retainAll(gp.sandboxGidMap.get(name));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    ret = new HashSet<Integer>();
+                    for (int gid : gp.gids) ret.add(gid);
+                }
+            }
+        }
+        return ret;
+    }
+
+    public ArrayList<String> getCurrentSandbox(int uid, int tid) {
+        return new ArrayList<String>(getSandbox(uid, tid));
+    }
+
     public HashMap<String, ArrayList<String>> getAllSandbox(int uid) {
         HashMap<String, ArrayList<String>> ret = null;
         synchronized (mPackages) {
@@ -2209,7 +2295,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                     for (String perm : gp.grantedPermissions) {
                         l.add(perm);
                     }
-                    ret.put("", l);
+                    ret.put("default", l);
                 }
                 if (gp.sandboxes != null) {
                     ret = new HashMap<String, ArrayList<String>>();
@@ -5602,9 +5688,11 @@ public class PackageManagerService extends IPackageManager.Stub {
 
         if (pkg.sandboxes.size() > 0) {
             gp.sandboxes = new HashMap<String, HashSet<String>>();
+            gp.sandboxGidMap = new HashMap<String, HashSet<Integer>>();
             /*
              * jaebaek: Note that exceptions are not handled
              * */
+            HashSet<Integer> globalGidsCache = null;
             for (PackageParser.Sandbox sbox: pkg.sandboxes) {
                 final int NN = sbox.requestedPermissions.size();
                 if (NN > 0) {
@@ -5613,33 +5701,115 @@ public class PackageManagerService extends IPackageManager.Stub {
                     for (int i=0; i<NN; i++) {
                         final String name = sbox.requestedPermissions.get(i);
                         final BasePermission bp = mSettings.mPermissions.get(name);
-                        boolean allowed = true;
-                        if (bp != null) {
-                            final String perm = bp.name;
-                            if ((ps.pkgFlags&ApplicationInfo.FLAG_SYSTEM) == 0
-                                    && ps.permissionsFixed) {
+                        if (DEBUG_INSTALL) {
+                            if (gp != ps) {
+                                Log.i(TAG, "Package " + pkg.packageName
+                                        + " of Sandbox " + sbox.sandboxName
+                                        + " checking " + name + ": " + bp);
+                            }
+                        }
+
+                        if (bp == null || bp.packageSetting == null) {
+                            Slog.w(TAG, "Unknown permission " + name
+                                    + " in package " + pkg.packageName);
+                            continue;
+                        }
+
+                        final String perm = bp.name;
+                        boolean allowed;
+                        boolean allowedSig = false;
+                        final int level = bp.protectionLevel & PermissionInfo.PROTECTION_MASK_BASE;
+                        if (level == PermissionInfo.PROTECTION_NORMAL
+                                || level == PermissionInfo.PROTECTION_DANGEROUS) {
+                            allowed = true;
+                        } else if (bp.packageSetting == null) {
+                            // This permission is invalid; skip it.
+                            allowed = false;
+                        } else if (level == PermissionInfo.PROTECTION_SIGNATURE) {
+                            allowed = grantSignaturePermission(perm, pkg, bp, null);
+                            if (allowed) {
+                                allowedSig = true;
+                            }
+                        } else {
+                            allowed = false;
+                        }
+                        if (DEBUG_INSTALL) {
+                            if (gp != ps) {
+                                Log.i(TAG, "Package " + pkg.packageName
+                                        + " of Sandbox " + sbox.sandboxName
+                                        + " granting " + perm);
+                            }
+                        }
+
+                        if (allowed) {
+                            if (!isSystemApp(ps) && ps.permissionsFixed) {
                                 // If this is an existing, non-system package, then
                                 // we can't add any new permissions to it.
-                                //
-                                // jaebaek: If we use sandbox tag only at the first
-                                // time of installing, it will not be called.
-                                // Because, permissionsFixed is FALSE.
+                                if (!allowedSig && !grantedPermissionsForSandbox.contains(perm)) {
+                                    // Except...  if this is a permission that was added
+                                    // to the platform (note: need to only do this when
+                                    // updating the platform).
+                                    allowed = isNewPlatformPermissionForPackage(perm, pkg);
+                                }
                             }
                             if (allowed) {
                                 if (!grantedPermissionsForSandbox.contains(perm)) {
                                     // jaebaek: add perm to this sandbox
                                     grantedPermissionsForSandbox.add(perm);
                                 }
-                            } else {
-                                Slog.w(TAG, "Not granting permission " + perm
-                                        + " to package " + pkg.packageName
-                                        + " because it was previously installed without");
+                                if (!ps.haveGids) {
+                                    HashSet<Integer> sboxGids =
+                                        gp.sandboxGidMap.get(sbox.sandboxName);
+                                    if (sboxGids == null) {
+                                        if (globalGidsCache == null) {
+                                            globalGidsCache = new HashSet<Integer>();
+                                            for (int gid : mGlobalGids) {
+                                                globalGidsCache.add(gid);
+                                            }
+                                        }
+                                        sboxGids = new HashSet<Integer>(globalGidsCache);
+                                        gp.sandboxGidMap.put(sbox.sandboxName, sboxGids);
+                                    }
+                                    // append to sandbox gids
+                                    for (int gid : bp.gids) sboxGids.add(gid);
+                                }
+                            }
+                        } else {
+                            if (grantedPermissionsForSandbox.remove(perm)) {
+                                HashSet<Integer> sboxGids =
+                                    gp.sandboxGidMap.get(sbox.sandboxName);
+                                if (sboxGids != null) {
+                                    // remove from sandbox gids
+                                    for (int gid : bp.gids) sboxGids.remove(gid);
+                                }
                             }
                         }
                     }
                     gp.sandboxes.put(sbox.sandboxName, grantedPermissionsForSandbox);
                 } else {
                     gp.sandboxes.put(sbox.sandboxName, null);
+                }
+            }
+
+            /* sort sandbox names in partial order */
+            gp.sandboxNames = new ArrayList<String>();
+            HashSet<String> sandboxNames = new HashSet<String>(gp.sandboxes.keySet());
+            while (!sandboxNames.isEmpty()) {
+                for (String sdboxName : gp.sandboxes.keySet()) {
+                    sandboxNames.remove(sdboxName);
+                    boolean isPrefix = false;
+                    for (String anotherSdboxName : sandboxNames) {
+                        if (isPrefixOfMethod(anotherSdboxName, sdboxName)) {
+                            isPrefix = true;
+                            break;
+                        }
+                    }
+
+                    if (isPrefix) {
+                        sandboxNames.add(sdboxName);
+                    } else {
+                        gp.sandboxNames.add(sdboxName);
+                    }
                 }
             }
         }
@@ -5722,7 +5892,8 @@ public class PackageManagerService extends IPackageManager.Stub {
                 & PermissionInfo.PROTECTION_FLAG_DEVELOPMENT) != 0) {
             // For development permissions, a development permission
             // is granted only if it was already granted.
-            allowed = origPermissions.contains(perm);
+            if (origPermissions != null)
+                allowed = origPermissions.contains(perm);
         }
         return allowed;
     }

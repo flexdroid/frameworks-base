@@ -1752,6 +1752,11 @@ public abstract class PackageManager {
     public abstract int checkPermission(String permName, String pkgName);
 
     /**
+     * jaebaek: to get current thread's sandbox information
+     */
+    public abstract List getCurrentSandbox(int uid, int tid);
+
+    /**
      * jaebaek: to check out sandbox information
      */
     public abstract Map getAllSandbox(int uid);
