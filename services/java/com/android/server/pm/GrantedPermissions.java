@@ -18,16 +18,19 @@ package com.android.server.pm;
 
 import android.content.pm.ApplicationInfo;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 class GrantedPermissions {
     int pkgFlags;
 
     HashSet<String> grantedPermissions = new HashSet<String>();
-    HashMap<String, HashSet<String>> sandboxes = null;
-
     int[] gids;
+
+    ArrayList<String> sandboxNames = null;
+    HashMap<String, HashSet<String>> sandboxes = null;
+    HashMap<String, HashSet<Integer>> sandboxGidMap = null;
 
     GrantedPermissions(int pkgFlags) {
         setFlags(pkgFlags);

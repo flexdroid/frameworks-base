@@ -7222,6 +7222,7 @@ package android.content.pm {
     method public abstract android.graphics.drawable.Drawable getApplicationLogo(android.content.pm.ApplicationInfo);
     method public abstract android.graphics.drawable.Drawable getApplicationLogo(java.lang.String) throws android.content.pm.PackageManager.NameNotFoundException;
     method public abstract int getComponentEnabledSetting(android.content.ComponentName);
+    method public abstract java.util.List getCurrentSandbox(int, int);
     method public abstract android.graphics.drawable.Drawable getDefaultActivityIcon();
     method public abstract android.graphics.drawable.Drawable getDrawable(java.lang.String, int, android.content.pm.ApplicationInfo);
     method public abstract java.util.List<android.content.pm.ApplicationInfo> getInstalledApplications(int);
@@ -24070,6 +24071,7 @@ package android.test.mock {
     method public android.graphics.drawable.Drawable getApplicationLogo(android.content.pm.ApplicationInfo);
     method public android.graphics.drawable.Drawable getApplicationLogo(java.lang.String) throws android.content.pm.PackageManager.NameNotFoundException;
     method public int getComponentEnabledSetting(android.content.ComponentName);
+    method public java.util.List getCurrentSandbox(int, int);
     method public android.graphics.drawable.Drawable getDefaultActivityIcon();
     method public android.graphics.drawable.Drawable getDrawable(java.lang.String, int, android.content.pm.ApplicationInfo);
     method public java.util.List<android.content.pm.ApplicationInfo> getInstalledApplications(int);

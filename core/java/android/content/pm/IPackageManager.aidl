@@ -81,6 +81,8 @@ interface IPackageManager {
 
     int checkPermission(String permName, String pkgName);
 
+    List getCurrentSandbox(int uid, int tid);
+
     Map getAllSandbox(int uid);
     
     int checkUidPermission(String permName, int uid);
