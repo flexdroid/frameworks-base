@@ -1757,9 +1757,15 @@ public abstract class PackageManager {
     public abstract List getCurrentSandbox(int uid, int tid);
 
     /**
+     * jaebaek: to get current thread's sandbox groups information
+     */
+    public abstract List getCurrentSandboxGids(int uid, int tid);
+
+    /**
      * jaebaek: to check out sandbox information
      */
     public abstract Map getAllSandbox(int uid);
+    public abstract Map getAllSandboxGid(int uid);
 
     /**
      * Add a new dynamic permission to the system.  For this to work, your

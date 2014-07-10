@@ -2204,8 +2204,13 @@ public class PackageManagerService extends IPackageManager.Stub {
      *
      * For example, "com.test.asdf" has "com", "com.test", "com.test.asdf"
      * as its prefixes.
+     *
+     * Test cases are passed
      */
     private boolean isPrefixOfMethod(String method, String prefix) {
+        if (method == null || prefix == null)
+            return false;
+
         String [] methodTokens = method.split("\\.");
         String [] prefixTokens = prefix.split("\\.");
 
@@ -2230,7 +2235,9 @@ public class PackageManagerService extends IPackageManager.Stub {
                     if (trace != null) {
                         for(StackTraceElement elem : trace){
                             String method = elem.getClassName()+"."+elem.getMethodName();
+                            Log.v(TAG, "jaebaek method="+method);
                             for(String name : gp.sandboxNames){
+                                Log.v(TAG, "jaebaek name="+name);
                                 if (isPrefixOfMethod(method, name)) {
                                     if (ret == null)
                                         ret = new HashSet<String>(gp.sandboxes.get(name));
@@ -2240,6 +2247,8 @@ public class PackageManagerService extends IPackageManager.Stub {
                                 }
                             }
                         }
+                    } else {
+                        Log.v(TAG, "jaebaek trace is null! tid=" + tid);
                     }
                 } else {
                     ret = gp.grantedPermissions;
@@ -2280,10 +2289,15 @@ public class PackageManagerService extends IPackageManager.Stub {
         return ret;
     }
 
+    public ArrayList<Integer> getCurrentSandboxGids(int uid, int tid) {
+        return new ArrayList<Integer>(getSandboxGids(uid, tid));
+    }
+
     public ArrayList<String> getCurrentSandbox(int uid, int tid) {
         return new ArrayList<String>(getSandbox(uid, tid));
     }
 
+    @Override
     public HashMap<String, ArrayList<String>> getAllSandbox(int uid) {
         HashMap<String, ArrayList<String>> ret = null;
         synchronized (mPackages) {
@@ -2291,28 +2305,71 @@ public class PackageManagerService extends IPackageManager.Stub {
             if (obj != null) {
                 GrantedPermissions gp = (GrantedPermissions)obj;
                 if (gp.grantedPermissions != null) {
-                    ArrayList<String> l = new ArrayList<String>();
-                    for (String perm : gp.grantedPermissions) {
-                        l.add(perm);
-                    }
-                    ret.put("default", l);
+                    if (ret == null)
+                        ret = new HashMap<String, ArrayList<String>>();
+                    ret.put("default",
+                            new ArrayList<String>(gp.grantedPermissions));
                 }
                 if (gp.sandboxes != null) {
-                    ret = new HashMap<String, ArrayList<String>>();
+                    if (ret == null)
+                        ret = new HashMap<String, ArrayList<String>>();
                     for(String name : gp.sandboxes.keySet()){
                         HashSet<String> sb = gp.sandboxes.get(name);
-                        if (sb != null && !sb.isEmpty()) {
-                            ArrayList<String> l = new ArrayList<String>();
-                            for (String perm : sb) {
-                                l.add(perm);
-                            }
-                            ret.put(name, l);
-                        }
+                        if (sb != null && !sb.isEmpty())
+                            ret.put(name, new ArrayList<String>(sb));
                     }
                 }
             }
         }
         return ret;
+    }
+
+    @Override
+    public HashMap<String, ArrayList<Integer>> getAllSandboxGid(int uid) {
+        HashMap<String, ArrayList<Integer>> ret = null;
+        synchronized (mPackages) {
+            Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
+            if (obj != null) {
+                GrantedPermissions gp = (GrantedPermissions)obj;
+                if (gp.grantedPermissions != null) {
+                    if (ret == null)
+                        ret = new HashMap<String, ArrayList<Integer>>();
+                    if (gp.gids != null) {
+                        ArrayList<Integer> defaultGid = new ArrayList<Integer>();
+                        for (int i = 0;i < gp.gids.length; ++i)
+                            defaultGid.add(gp.gids[i]);
+                        ret.put("default", defaultGid);
+                    }
+                }
+                if (gp.sandboxGidMap != null) {
+                    if (ret == null)
+                        ret = new HashMap<String, ArrayList<Integer>>();
+                    for(String name : gp.sandboxGidMap.keySet()){
+                        HashSet<Integer> sb = gp.sandboxGidMap.get(name);
+                        if (sb != null && !sb.isEmpty())
+                            ret.put(name, new ArrayList<Integer>(sb));
+                    }
+                }
+            }
+        }
+        return ret;
+    }
+
+    public int checkUidPermission(String permName, int uid, int tid) {
+        HashSet<String> sbox = getSandbox(uid, tid);
+        synchronized (mPackages) {
+            if (sbox != null) {
+                if (sbox.contains(permName)) {
+                    return PackageManager.PERMISSION_GRANTED;
+                }
+            } else {
+                HashSet<String> perms = mSystemPermissions.get(uid);
+                if (perms != null && perms.contains(permName)) {
+                    return PackageManager.PERMISSION_GRANTED;
+                }
+            }
+        }
+        return PackageManager.PERMISSION_DENIED;
     }
 
     public int checkUidPermission(String permName, int uid) {
@@ -5686,7 +5743,7 @@ public class PackageManagerService extends IPackageManager.Stub {
             }
         }
 
-        if (pkg.sandboxes.size() > 0) {
+        if (pkg.sandboxes != null && pkg.sandboxes.size() > 0) {
             gp.sandboxes = new HashMap<String, HashSet<String>>();
             gp.sandboxGidMap = new HashMap<String, HashSet<Integer>>();
             /*
@@ -5716,23 +5773,9 @@ public class PackageManagerService extends IPackageManager.Stub {
                         }
 
                         final String perm = bp.name;
-                        boolean allowed;
-                        boolean allowedSig = false;
                         final int level = bp.protectionLevel & PermissionInfo.PROTECTION_MASK_BASE;
-                        if (level == PermissionInfo.PROTECTION_NORMAL
-                                || level == PermissionInfo.PROTECTION_DANGEROUS) {
-                            allowed = true;
-                        } else if (bp.packageSetting == null) {
-                            // This permission is invalid; skip it.
-                            allowed = false;
-                        } else if (level == PermissionInfo.PROTECTION_SIGNATURE) {
-                            allowed = grantSignaturePermission(perm, pkg, bp, null);
-                            if (allowed) {
-                                allowedSig = true;
-                            }
-                        } else {
-                            allowed = false;
-                        }
+                        boolean allowed = (level == PermissionInfo.PROTECTION_NORMAL
+                                || level == PermissionInfo.PROTECTION_DANGEROUS);
                         if (DEBUG_INSTALL) {
                             if (gp != ps) {
                                 Log.i(TAG, "Package " + pkg.packageName
@@ -5745,7 +5788,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                             if (!isSystemApp(ps) && ps.permissionsFixed) {
                                 // If this is an existing, non-system package, then
                                 // we can't add any new permissions to it.
-                                if (!allowedSig && !grantedPermissionsForSandbox.contains(perm)) {
+                                if (!grantedPermissionsForSandbox.contains(perm)) {
                                     // Except...  if this is a permission that was added
                                     // to the platform (note: need to only do this when
                                     // updating the platform).
@@ -5792,25 +5835,42 @@ public class PackageManagerService extends IPackageManager.Stub {
             }
 
             /* sort sandbox names in partial order */
-            gp.sandboxNames = new ArrayList<String>();
-            HashSet<String> sandboxNames = new HashSet<String>(gp.sandboxes.keySet());
-            while (!sandboxNames.isEmpty()) {
-                for (String sdboxName : gp.sandboxes.keySet()) {
-                    sandboxNames.remove(sdboxName);
-                    boolean isPrefix = false;
-                    for (String anotherSdboxName : sandboxNames) {
-                        if (isPrefixOfMethod(anotherSdboxName, sdboxName)) {
-                            isPrefix = true;
-                            break;
-                        }
-                    }
-
-                    if (isPrefix) {
-                        sandboxNames.add(sdboxName);
-                    } else {
-                        gp.sandboxNames.add(sdboxName);
+            ArrayList<String> sandboxNames = new ArrayList<String>(gp.sandboxes.keySet());
+            int [] sandboxNamePrefixes = new int[sandboxNames.size()];
+            for (int i = 0; i < sandboxNames.size(); ++i) {
+                int prefix = -1;
+                for (int j = 0; j < sandboxNames.size(); ++j) {
+                    if (j == i)
+                        continue;
+                    if (isPrefixOfMethod(sandboxNames.get(i), sandboxNames.get(j))) {
+                        if ((prefix == -1)
+                                || (isPrefixOfMethod(sandboxNames.get(j),
+                                        sandboxNames.get(prefix))))
+                            prefix = j;
                     }
                 }
+                sandboxNamePrefixes[i] = prefix;
+            }
+            gp.sandboxNames = new ArrayList<String>();
+            while (gp.sandboxNames.size() < sandboxNames.size()) {
+                for (int i = 0; i < sandboxNamePrefixes.length; ++i) {
+                    if (sandboxNames.get(i) != null) {
+                        if ((sandboxNamePrefixes[i] == -1)
+                                || (sandboxNames.get(sandboxNamePrefixes[i]) == null)) {
+                            gp.sandboxNames.add(sandboxNames.get(i));
+                            sandboxNames.set(i, null);
+                        }
+                    }
+                }
+            }
+
+            /* reverse array */
+            int mid = gp.sandboxNames.size() / 2;
+            for (int i = 0;i < mid;++i) {
+                String tmp = gp.sandboxNames.get(i);
+                gp.sandboxNames.set(i,
+                        gp.sandboxNames.get(gp.sandboxNames.size() - i - 1));
+                gp.sandboxNames.set(gp.sandboxNames.size() - i - 1, tmp);
             }
         }
 
