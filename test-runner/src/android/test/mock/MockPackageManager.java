@@ -168,12 +168,12 @@ public class MockPackageManager extends PackageManager {
     }
 
     @Override
-    public List getCurrentSandbox(int uid, int tid) {
+    public List getCurrentSandbox(int uid, int pid, int tid) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public List getCurrentSandboxGids(int uid, int tid) {
+    public List getCurrentSandboxGids(int uid, int pid, int tid) {
         throw new UnsupportedOperationException();
     }
 

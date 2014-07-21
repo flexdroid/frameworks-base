@@ -30,7 +30,7 @@ class GrantedPermissions {
 
     ArrayList<String> sandboxNames = null;
     HashMap<String, HashSet<String>> sandboxes = null;
-    HashMap<String, HashSet<Integer>> sandboxGidMap = null;
+    HashMap<String, int[]> sandboxGidMap = null;
 
     GrantedPermissions(int pkgFlags) {
         setFlags(pkgFlags);

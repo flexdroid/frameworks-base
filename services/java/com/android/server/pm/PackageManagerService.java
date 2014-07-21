@@ -1043,6 +1043,7 @@ public class PackageManagerService extends IPackageManager.Stub {
         PackageManagerService m = new PackageManagerService(context, installer,
                 factoryTest, onlyCore);
         ServiceManager.addService("package", m);
+        DdmVmInternal.registerPM();
         return m;
     }
 
@@ -2224,17 +2225,17 @@ public class PackageManagerService extends IPackageManager.Stub {
         return true;
     }
 
-    private HashSet<String> getSandbox(int uid, int tid) {
+    private HashSet<String> getSandbox(int uid, int pid, int tid) {
         HashSet<String> ret = null;
+        Log.v(TAG, "jaebaek getSandbox pid="+pid+", tid="+tid);
         synchronized (mPackages) {
             Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
             if (obj != null) {
                 GrantedPermissions gp = (GrantedPermissions)obj;
                 if (gp.sandboxes != null) {
-                    StackTraceElement[] trace = DdmVmInternal.getStackTraceBySysTid(tid);
+                    String[] trace = DdmVmInternal.getStackTraceBySysTid(pid, tid).split(" ");
                     if (trace != null) {
-                        for(StackTraceElement elem : trace){
-                            String method = elem.getClassName()+"."+elem.getMethodName();
+                        for(String method : trace){
                             Log.v(TAG, "jaebaek method="+method);
                             for(String name : gp.sandboxNames){
                                 Log.v(TAG, "jaebaek name="+name);
@@ -2258,23 +2259,37 @@ public class PackageManagerService extends IPackageManager.Stub {
         return ret;
     }
 
-    private HashSet<Integer> getSandboxGids(int uid, int tid) {
+    /*
+     * jaebaek: convert int[] to HashSet<Integer>
+     */
+    private HashSet<Integer> intArrayToHashSet(int[] arr) {
+        HashSet<Integer> ret = null;
+        if (arr != null) {
+            ret = new HashSet<Integer>();
+            for (int elem : arr)
+                ret.add(elem);
+        }
+        return ret;
+    }
+
+    private HashSet<Integer> getSandboxGids(int uid, int pid, int tid) {
         HashSet<Integer> ret = null;
         synchronized (mPackages) {
             Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
             if (obj != null) {
                 GrantedPermissions gp = (GrantedPermissions)obj;
                 if (gp.sandboxGidMap != null) {
-                    StackTraceElement[] trace = DdmVmInternal.getStackTraceBySysTid(tid);
+                    String[] trace = DdmVmInternal.getStackTraceBySysTid(pid, tid).split(" ");
                     if (trace != null) {
-                        for(StackTraceElement elem : trace){
-                            String method = elem.getClassName()+"."+elem.getMethodName();
+                        for(String method : trace){
                             for(String name : gp.sandboxNames){
                                 if (isPrefixOfMethod(method, name)) {
                                     if (ret == null)
-                                        ret = new HashSet<Integer>(gp.sandboxGidMap.get(name));
+                                        ret = new HashSet<Integer>(
+                                                intArrayToHashSet(gp.sandboxGidMap.get(name)));
                                     else
-                                        ret.retainAll(gp.sandboxGidMap.get(name));
+                                        ret.retainAll(
+                                                intArrayToHashSet(gp.sandboxGidMap.get(name)));
                                     break;
                                 }
                             }
@@ -2289,12 +2304,12 @@ public class PackageManagerService extends IPackageManager.Stub {
         return ret;
     }
 
-    public ArrayList<Integer> getCurrentSandboxGids(int uid, int tid) {
-        return new ArrayList<Integer>(getSandboxGids(uid, tid));
+    public ArrayList<Integer> getCurrentSandboxGids(int uid, int pid, int tid) {
+        return new ArrayList<Integer>(getSandboxGids(uid, pid, tid));
     }
 
-    public ArrayList<String> getCurrentSandbox(int uid, int tid) {
-        return new ArrayList<String>(getSandbox(uid, tid));
+    public ArrayList<String> getCurrentSandbox(int uid, int pid, int tid) {
+        return new ArrayList<String>(getSandbox(uid, pid, tid));
     }
 
     @Override
@@ -2345,7 +2360,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                     if (ret == null)
                         ret = new HashMap<String, ArrayList<Integer>>();
                     for(String name : gp.sandboxGidMap.keySet()){
-                        HashSet<Integer> sb = gp.sandboxGidMap.get(name);
+                        HashSet<Integer> sb = intArrayToHashSet(gp.sandboxGidMap.get(name));
                         if (sb != null && !sb.isEmpty())
                             ret.put(name, new ArrayList<Integer>(sb));
                     }
@@ -2355,8 +2370,8 @@ public class PackageManagerService extends IPackageManager.Stub {
         return ret;
     }
 
-    public int checkUidPermission(String permName, int uid, int tid) {
-        HashSet<String> sbox = getSandbox(uid, tid);
+    public int checkUidPermission(String permName, int uid, int pid, int tid) {
+        HashSet<String> sbox = getSandbox(uid, pid, tid);
         synchronized (mPackages) {
             if (sbox != null) {
                 if (sbox.contains(permName)) {
@@ -5745,11 +5760,10 @@ public class PackageManagerService extends IPackageManager.Stub {
 
         if (pkg.sandboxes != null && pkg.sandboxes.size() > 0) {
             gp.sandboxes = new HashMap<String, HashSet<String>>();
-            gp.sandboxGidMap = new HashMap<String, HashSet<Integer>>();
+            gp.sandboxGidMap = new HashMap<String, int[]>();
             /*
              * jaebaek: Note that exceptions are not handled
              * */
-            HashSet<Integer> globalGidsCache = null;
             for (PackageParser.Sandbox sbox: pkg.sandboxes) {
                 final int NN = sbox.requestedPermissions.size();
                 if (NN > 0) {
@@ -5801,30 +5815,15 @@ public class PackageManagerService extends IPackageManager.Stub {
                                     grantedPermissionsForSandbox.add(perm);
                                 }
                                 if (!ps.haveGids) {
-                                    HashSet<Integer> sboxGids =
-                                        gp.sandboxGidMap.get(sbox.sandboxName);
-                                    if (sboxGids == null) {
-                                        if (globalGidsCache == null) {
-                                            globalGidsCache = new HashSet<Integer>();
-                                            for (int gid : mGlobalGids) {
-                                                globalGidsCache.add(gid);
-                                            }
-                                        }
-                                        sboxGids = new HashSet<Integer>(globalGidsCache);
-                                        gp.sandboxGidMap.put(sbox.sandboxName, sboxGids);
-                                    }
-                                    // append to sandbox gids
-                                    for (int gid : bp.gids) sboxGids.add(gid);
+                                    int[] sboxGids = appendInts(mGlobalGids, bp.gids);
+                                    gp.sandboxGidMap.put(sbox.sandboxName, sboxGids);
                                 }
                             }
                         } else {
                             if (grantedPermissionsForSandbox.remove(perm)) {
-                                HashSet<Integer> sboxGids =
-                                    gp.sandboxGidMap.get(sbox.sandboxName);
-                                if (sboxGids != null) {
-                                    // remove from sandbox gids
-                                    for (int gid : bp.gids) sboxGids.remove(gid);
-                                }
+                                int[] sboxGids = gp.sandboxGidMap.get(sbox.sandboxName);
+                                sboxGids = removeInts(sboxGids, bp.gids);
+                                gp.sandboxGidMap.put(sbox.sandboxName, sboxGids);
                             }
                         }
                     }

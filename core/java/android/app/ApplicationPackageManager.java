@@ -325,18 +325,18 @@ final class ApplicationPackageManager extends PackageManager {
     }
 
     @Override
-    public List getCurrentSandbox(int uid, int tid) {
+    public List getCurrentSandbox(int uid, int pid, int tid) {
         try {
-            return mPM.getCurrentSandbox(uid, tid);
+            return mPM.getCurrentSandbox(uid, pid, tid);
         } catch (RemoteException e) {
             throw new RuntimeException("Package manager has died", e);
         }
     }
 
     @Override
-    public List getCurrentSandboxGids(int uid, int tid) {
+    public List getCurrentSandboxGids(int uid, int pid, int tid) {
         try {
-            return mPM.getCurrentSandboxGids(uid, tid);
+            return mPM.getCurrentSandboxGids(uid, pid, tid);
         } catch (RemoteException e) {
             throw new RuntimeException("Package manager has died", e);
         }

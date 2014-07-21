@@ -1754,12 +1754,12 @@ public abstract class PackageManager {
     /**
      * jaebaek: to get current thread's sandbox information
      */
-    public abstract List getCurrentSandbox(int uid, int tid);
+    public abstract List getCurrentSandbox(int uid, int pid, int tid);
 
     /**
      * jaebaek: to get current thread's sandbox groups information
      */
-    public abstract List getCurrentSandboxGids(int uid, int tid);
+    public abstract List getCurrentSandboxGids(int uid, int pid, int tid);
 
     /**
      * jaebaek: to check out sandbox information
