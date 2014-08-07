@@ -3619,6 +3619,9 @@ public class Activity extends ContextThemeWrapper
      */
     @Override
     public void startActivity(Intent intent, Bundle options) {
+        long start = System.currentTimeMillis();
+        Log.v(TAG, "jaebaek startActivity: " + intent.getComponent().getClassName()
+                + " is called at " + start);
         if (options != null) {
             startActivityForResult(intent, -1, options);
         } else {
@@ -3626,6 +3629,11 @@ public class Activity extends ContextThemeWrapper
             // applications that may have overridden the method.
             startActivityForResult(intent, -1);
         }
+        long end = System.currentTimeMillis();
+        Log.v(TAG, "jaebaek startActivity: " + intent.getComponent().getClassName()
+                + " is done at " + end);
+        Log.v(TAG, "jaebaek startActivity: " + intent.getComponent().getClassName()
+                + " takes " + (end - start));
     }
 
     /**
