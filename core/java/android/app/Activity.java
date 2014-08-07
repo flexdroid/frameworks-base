@@ -3420,6 +3420,9 @@ public class Activity extends ContextThemeWrapper
      * @see #startActivity 
      */
     public void startActivityForResult(Intent intent, int requestCode, Bundle options) {
+        long start = System.currentTimeMillis();
+        Log.v(TAG, "jaebaek startActivityForResult: " + intent.getComponent().getClassName()
+                + " is called at " + start);
         if (mParent == null) {
             Instrumentation.ActivityResult ar =
                 mInstrumentation.execStartActivity(
@@ -3455,6 +3458,11 @@ public class Activity extends ContextThemeWrapper
                 mParent.startActivityFromChild(this, intent, requestCode);
             }
         }
+        long end = System.currentTimeMillis();
+        Log.v(TAG, "jaebaek startActivityForResult: " + intent.getComponent().getClassName()
+                + " is done at " + end);
+        Log.v(TAG, "jaebaek startActivityForResult: " + intent.getComponent().getClassName()
+                + " takes " + (end - start));
     }
 
     /**
@@ -3619,6 +3627,9 @@ public class Activity extends ContextThemeWrapper
      */
     @Override
     public void startActivity(Intent intent, Bundle options) {
+        long start = System.currentTimeMillis();
+        Log.v(TAG, "jaebaek startActivity: " + intent.getComponent().getClassName()
+                + " is called at " + start);
         if (options != null) {
             startActivityForResult(intent, -1, options);
         } else {
@@ -3626,6 +3637,11 @@ public class Activity extends ContextThemeWrapper
             // applications that may have overridden the method.
             startActivityForResult(intent, -1);
         }
+        long end = System.currentTimeMillis();
+        Log.v(TAG, "jaebaek startActivity: " + intent.getComponent().getClassName()
+                + " is done at " + end);
+        Log.v(TAG, "jaebaek startActivity: " + intent.getComponent().getClassName()
+                + " takes " + (end - start));
     }
 
     /**
