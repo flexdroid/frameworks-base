@@ -2227,7 +2227,6 @@ public class PackageManagerService extends IPackageManager.Stub {
 
     private HashSet<String> getSandbox(int uid, int pid, int tid) {
         HashSet<String> ret = null;
-        Log.v(TAG, "jaebaek getSandbox pid="+pid+", tid="+tid);
         synchronized (mPackages) {
             Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
             if (obj != null) {
@@ -2236,9 +2235,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                     String[] trace = DdmVmInternal.getStackTraceBySysTid(pid, tid).split(" ");
                     if (trace != null) {
                         for(String method : trace){
-                            Log.v(TAG, "jaebaek method="+method);
                             for(String name : gp.sandboxNames){
-                                Log.v(TAG, "jaebaek name="+name);
                                 if (isPrefixOfMethod(method, name)) {
                                     if (ret == null)
                                         ret = new HashSet<String>(gp.sandboxes.get(name));
@@ -2249,7 +2246,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                             }
                         }
                     } else {
-                        Log.v(TAG, "jaebaek trace is null! tid=" + tid);
+                        Log.v(TAG, "jaebaek getSandbox trace is null! tid=" + tid);
                     }
                 } else {
                     ret = gp.grantedPermissions;
@@ -2370,24 +2367,16 @@ public class PackageManagerService extends IPackageManager.Stub {
         return ret;
     }
 
-    public int checkUidPermission(String permName, int uid, int pid, int tid) {
-        HashSet<String> sbox = getSandbox(uid, pid, tid);
-        synchronized (mPackages) {
-            if (sbox != null) {
-                if (sbox.contains(permName)) {
-                    return PackageManager.PERMISSION_GRANTED;
-                }
-            } else {
-                HashSet<String> perms = mSystemPermissions.get(uid);
-                if (perms != null && perms.contains(permName)) {
+    public int checkUidPermission(String permName, int uid) {
+        if (Binder.getCallingUid() == uid) {
+            HashSet<String> sbox = getSandbox(uid, Binder.getCallingPid(),
+                    Binder.getCallingThreadId());
+            synchronized (mPackages) {
+                if (sbox != null && sbox.contains(permName)) {
                     return PackageManager.PERMISSION_GRANTED;
                 }
             }
         }
-        return PackageManager.PERMISSION_DENIED;
-    }
-
-    public int checkUidPermission(String permName, int uid) {
         synchronized (mPackages) {
             Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
             if (obj != null) {
