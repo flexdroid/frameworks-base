@@ -2228,7 +2228,7 @@ public class PackageManagerService extends IPackageManager.Stub {
     private HashSet<String> getSandbox(int uid, int pid, int tid) {
         String [] pkgs = getPackagesForUid(uid);
         pkgs = (pkgs == null ? new String[] { "" } : pkgs);
-        long start = System.currentTimeMillis();
+        long start = System.currentTimeMicro();
         Log.v(TAG, "jaebaek getSandbox: " + pkgs[0]
                 + " is called at " + start);
 
@@ -2260,7 +2260,7 @@ public class PackageManagerService extends IPackageManager.Stub {
             }
         }
 
-        long end = System.currentTimeMillis();
+        long end = System.currentTimeMicro();
         Log.v(TAG, "jaebaek getSandbox: " + pkgs[0]
                 + " is done at " + end);
         return ret;

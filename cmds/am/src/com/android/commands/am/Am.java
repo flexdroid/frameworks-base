@@ -581,15 +581,13 @@ public class Am extends BaseCommand {
             return;
         }
         System.out.println("Starting service: " + intent);
-        long [] now = System.currentTimeMicros();
         System.out.println("jaebaek startService: "
                 + intent.getComponent().getClassName()
-                + " is called at " + now[0] + "." + now[1]);
+                + " is called at " + System.currentTimeMicro());
         ComponentName cn = mAm.startService(null, intent, intent.getType(), mUserId);
-        long [] now = System.currentTimeMicros();
         System.out.println("jaebaek startService: "
                 + intent.getComponent().getClassName()
-                + " is done at " + now[0] + "." + now[1]);
+                + " is done at " + System.currentTimeMicro());
         if (cn == null) {
             System.err.println("Error: Not found; no service started.");
         } else if (cn.getPackageName().equals("!")) {
@@ -680,10 +678,9 @@ public class Am extends BaseCommand {
 
             IActivityManager.WaitResult result = null;
             int res;
-            long [] now = System.currentTimeMicros();
             System.out.println("jaebaek startActivity: "
                     + intent.getComponent().getClassName()
-                    + " is called at " + now[0] + "." + now[1]);
+                    + " is called at " + System.currentTimeMicro());
             if (mWaitOption) {
                 result = mAm.startActivityAndWait(null, null, intent, mimeType,
                         null, null, 0, mStartFlags, mProfileFile, fd, null, mUserId);
@@ -692,10 +689,9 @@ public class Am extends BaseCommand {
                 res = mAm.startActivityAsUser(null, null, intent, mimeType,
                         null, null, 0, mStartFlags, mProfileFile, fd, null, mUserId);
             }
-            long [] now = System.currentTimeMicros();
             System.out.println("jaebaek startActivity: "
                     + intent.getComponent().getClassName()
-                    + " is done at " + now[0] + "." + now[1]);
+                    + " is done at " + System.currentTimeMicro());
             PrintStream out = mWaitOption ? System.out : System.err;
             boolean launched = false;
             switch (res) {
