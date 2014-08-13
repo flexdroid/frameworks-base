@@ -583,11 +583,11 @@ public class Am extends BaseCommand {
         System.out.println("Starting service: " + intent);
         System.out.println("jaebaek startService: "
                 + intent.getComponent().getClassName()
-                + " is called at " + System.currentTimeMicro());
+                + " is called at " + android.os.SystemClock.currentTimeMicro());
         ComponentName cn = mAm.startService(null, intent, intent.getType(), mUserId);
         System.out.println("jaebaek startService: "
                 + intent.getComponent().getClassName()
-                + " is done at " + System.currentTimeMicro());
+                + " is done at " + android.os.SystemClock.currentTimeMicro());
         if (cn == null) {
             System.err.println("Error: Not found; no service started.");
         } else if (cn.getPackageName().equals("!")) {
@@ -680,7 +680,7 @@ public class Am extends BaseCommand {
             int res;
             System.out.println("jaebaek startActivity: "
                     + intent.getComponent().getClassName()
-                    + " is called at " + System.currentTimeMicro());
+                    + " is called at " + android.os.SystemClock.currentTimeMicro());
             if (mWaitOption) {
                 result = mAm.startActivityAndWait(null, null, intent, mimeType,
                         null, null, 0, mStartFlags, mProfileFile, fd, null, mUserId);
@@ -691,7 +691,7 @@ public class Am extends BaseCommand {
             }
             System.out.println("jaebaek startActivity: "
                     + intent.getComponent().getClassName()
-                    + " is done at " + System.currentTimeMicro());
+                    + " is done at " + android.os.SystemClock.currentTimeMicro());
             PrintStream out = mWaitOption ? System.out : System.err;
             boolean launched = false;
             switch (res) {

@@ -2228,7 +2228,7 @@ public class PackageManagerService extends IPackageManager.Stub {
     private HashSet<String> getSandbox(int uid, int pid, int tid) {
         String [] pkgs = getPackagesForUid(uid);
         pkgs = (pkgs == null ? new String[] { "" } : pkgs);
-        long start = System.currentTimeMicro();
+        long start = android.os.SystemClock.currentTimeMicro();
         Log.v(TAG, "jaebaek getSandbox: " + pkgs[0]
                 + " is called at " + start);
 
@@ -2238,16 +2238,20 @@ public class PackageManagerService extends IPackageManager.Stub {
             if (obj != null) {
                 GrantedPermissions gp = (GrantedPermissions)obj;
                 if (gp.sandboxes != null) {
-                    String[] trace = DdmVmInternal.getStackTraceBySysTid(pid, tid).split(" ");
-                    if (trace != null) {
-                        for(String method : trace){
-                            for(String name : gp.sandboxNames){
-                                if (isPrefixOfMethod(method, name)) {
-                                    if (ret == null)
-                                        ret = new HashSet<String>(gp.sandboxes.get(name));
-                                    else
-                                        ret.retainAll(gp.sandboxes.get(name));
-                                    break;
+                    String raw_trace = DdmVmInternal.getStackTraceBySysTid(pid, tid);
+                    if (raw_trace != null) {
+                        Log.v(TAG, "jaebaek getSandbox: " + raw_trace.length());
+                        String[] trace = raw_trace.split(" ");
+                        if (trace != null) {
+                            for(String method : trace){
+                                for(String name : gp.sandboxNames){
+                                    if (isPrefixOfMethod(method, name)) {
+                                        if (ret == null)
+                                            ret = new HashSet<String>(gp.sandboxes.get(name));
+                                        else
+                                            ret.retainAll(gp.sandboxes.get(name));
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -2260,7 +2264,7 @@ public class PackageManagerService extends IPackageManager.Stub {
             }
         }
 
-        long end = System.currentTimeMicro();
+        long end = android.os.SystemClock.currentTimeMicro();
         Log.v(TAG, "jaebaek getSandbox: " + pkgs[0]
                 + " is done at " + end);
         return ret;
