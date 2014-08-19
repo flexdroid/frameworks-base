@@ -2226,11 +2226,10 @@ public class PackageManagerService extends IPackageManager.Stub {
     }
 
     private HashSet<String> getSandbox(int uid, int pid, int tid) {
+        int length = 0;
         String [] pkgs = getPackagesForUid(uid);
         pkgs = (pkgs == null ? new String[] { "" } : pkgs);
         long start = android.os.SystemClock.currentTimeMicro();
-        Log.v(TAG, "jaebaek getSandbox: " + pkgs[0]
-                + " is called at " + start);
 
         HashSet<String> ret = null;
         synchronized (mPackages) {
@@ -2240,7 +2239,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                 if (gp.sandboxes != null) {
                     String raw_trace = DdmVmInternal.getStackTraceBySysTid(pid, tid);
                     if (raw_trace != null) {
-                        Log.v(TAG, "jaebaek getSandbox: " + raw_trace.length());
+                        length = raw_trace.length();
                         String[] trace = raw_trace.split(" ");
                         if (trace != null) {
                             for(String method : trace){
@@ -2265,8 +2264,10 @@ public class PackageManagerService extends IPackageManager.Stub {
         }
 
         long end = android.os.SystemClock.currentTimeMicro();
-        Log.v(TAG, "jaebaek getSandbox: " + pkgs[0]
-                + " is done at " + end);
+        if (length != 0) {
+            Log.v(TAG, "jaebaek getSandbox: " + pkgs[0]
+                    + ", " + (end - start) + " us, " + length + " bytes");
+        }
         return ret;
     }
 
