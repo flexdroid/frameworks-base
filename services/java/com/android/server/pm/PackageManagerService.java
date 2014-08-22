@@ -2227,8 +2227,6 @@ public class PackageManagerService extends IPackageManager.Stub {
 
     private HashSet<String> getSandbox(int uid, int pid, int tid) {
         int length = 0;
-        String [] pkgs = getPackagesForUid(uid);
-        pkgs = (pkgs == null ? new String[] { "" } : pkgs);
         long start = android.os.SystemClock.currentTimeMicro();
 
         HashSet<String> ret = null;
@@ -2237,6 +2235,7 @@ public class PackageManagerService extends IPackageManager.Stub {
             if (obj != null) {
                 GrantedPermissions gp = (GrantedPermissions)obj;
                 if (gp.sandboxes != null) {
+                    Log.v(TAG, "["+start+"] jaebaek getSandbox ---->");
                     String raw_trace = DdmVmInternal.getStackTraceBySysTid(pid, tid);
                     if (raw_trace != null) {
                         length = raw_trace.length();
@@ -2257,6 +2256,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                     } else {
                         Log.v(TAG, "jaebaek getSandbox trace is null! tid=" + tid);
                     }
+                    Log.v(TAG, "["+start+"] jaebaek getSandbox ----<");
                 } else {
                     ret = gp.grantedPermissions;
                 }
@@ -2265,7 +2265,9 @@ public class PackageManagerService extends IPackageManager.Stub {
 
         long end = android.os.SystemClock.currentTimeMicro();
         if (length != 0) {
-            Log.v(TAG, "jaebaek getSandbox: " + pkgs[0]
+            String [] pkgs = getPackagesForUid(uid);
+            pkgs = (pkgs == null ? new String[] { "" } : pkgs);
+            Log.v(TAG, "["+start+"] jaebaek getSandbox: " + pkgs[0]
                     + ", " + (end - start) + " us, " + length + " bytes");
         }
         return ret;
@@ -2317,11 +2319,13 @@ public class PackageManagerService extends IPackageManager.Stub {
     }
 
     public ArrayList<Integer> getCurrentSandboxGids(int uid, int pid, int tid) {
-        return new ArrayList<Integer>(getSandboxGids(uid, pid, tid));
+        HashSet<Integer> ret = getSandboxGids(uid, pid, tid);
+        return (ret == null) ? null : new ArrayList<Integer>(ret);
     }
 
     public ArrayList<String> getCurrentSandbox(int uid, int pid, int tid) {
-        return new ArrayList<String>(getSandbox(uid, pid, tid));
+        HashSet<String> ret = getSandbox(uid, pid, tid);
+        return (ret == null) ? null : new ArrayList<String>(ret);
     }
 
     @Override
@@ -2383,6 +2387,7 @@ public class PackageManagerService extends IPackageManager.Stub {
     }
 
     public int checkUidPermission(String permName, int uid) {
+        /*
         if (Binder.getCallingUid() == uid) {
             HashSet<String> sbox = getSandbox(uid, Binder.getCallingPid(),
                     Binder.getCallingThreadId());
@@ -2392,6 +2397,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                 }
             }
         }
+        */
         synchronized (mPackages) {
             Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
             if (obj != null) {
