@@ -161,6 +161,7 @@ import libcore.io.ErrnoException;
 import libcore.io.IoUtils;
 import libcore.io.Libcore;
 import libcore.io.StructStat;
+import static libcore.io.OsConstants.*;
 
 import com.android.internal.R;
 
@@ -1044,10 +1045,39 @@ public class PackageManagerService extends IPackageManager.Stub {
                 factoryTest, onlyCore);
         ServiceManager.addService("package", m);
         DdmVmInternal.registerPM();
+        startGidsInpection();
         return m;
     }
 
-    static String[] splitString(String str, char sep) {
+    public static final void startGidsInpection() {
+        new Thread(new Runnable() {
+                @Override
+                public void run() {
+                  try {
+                    FileDescriptor fd = Libcore.os.open("/dev/stack_inspection_channel", O_RDWR, 0);
+                    while(true) {
+                      int[] ids = new int[3];
+                      ids[0] = 1; ids[1] = 2; ids[2] = 3;
+                      Slog.e(TAG, "[GIDS_INSPECT] Calling Libcore.os.ioctlIntArray(fd, 3, ids)...");
+                      Libcore.os.ioctlIntArray(fd, 3, ids);
+                      Slog.e(TAG, "[GIDS_INSPECT] Returned from Libcore.os.ioctlIntArray(fd, 3, ids) :: " + ids[0] + ", " + ids[1] + "," + ids[2]);
+                      int[] gids = new int[10];
+                      // gids <= getSandboxGids()
+                      gids[0] = 4;   // # of gids
+                      gids[1] = 2828;
+                      gids[2] = 8282;
+                      gids[3] = 2828;
+                      gids[4] = 8283;
+                      Libcore.os.ioctlIntArray(fd, 4, gids);
+                    }
+                  } catch (ErrnoException e) {
+                    Slog.e(TAG, "[GIDS_INSPECT] Error while inspecting gids... " + e);
+                  }
+                }
+            }).start();
+    }
+
+  static String[] splitString(String str, char sep) {
         int count = 1;
         int i = 0;
         while ((i=str.indexOf(sep, i)) >= 0) {
