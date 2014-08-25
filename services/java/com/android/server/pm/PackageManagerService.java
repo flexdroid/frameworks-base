@@ -2387,7 +2387,6 @@ public class PackageManagerService extends IPackageManager.Stub {
     }
 
     public int checkUidPermission(String permName, int uid) {
-        /*
         if (Binder.getCallingUid() == uid) {
             HashSet<String> sbox = getSandbox(uid, Binder.getCallingPid(),
                     Binder.getCallingThreadId());
@@ -2397,7 +2396,6 @@ public class PackageManagerService extends IPackageManager.Stub {
                 }
             }
         }
-        */
         synchronized (mPackages) {
             Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
             if (obj != null) {
