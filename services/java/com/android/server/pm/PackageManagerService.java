@@ -2237,17 +2237,21 @@ public class PackageManagerService extends IPackageManager.Stub {
                 if (gp.sandboxes != null) {
                     Log.v(TAG, "["+start+"] jaebaek getSandbox ---->");
                     String raw_trace = DdmVmInternal.getStackTraceBySysTid(pid, tid);
+
                     if (raw_trace != null) {
                         length = raw_trace.length();
+
                         String[] trace = raw_trace.split(" ");
                         if (trace != null) {
                             for(String method : trace){
-                                for(String name : gp.sandboxNames){
+                                for(int i = 0;i < gp.sandboxNames.size();++i){
+                                    String name = gp.sandboxNames.get(i);
+                                //for(String name : gp.sandboxNames){
                                     if (isPrefixOfMethod(method, name)) {
                                         if (ret == null)
-                                            ret = new HashSet<String>(gp.sandboxes.get(name));
+                                            ret = new HashSet<String>(gp.sandboxes.get(i));
                                         else
-                                            ret.retainAll(gp.sandboxes.get(name));
+                                            ret.retainAll(gp.sandboxes.get(i));
                                         break;
                                     }
                                 }
@@ -2256,6 +2260,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                     } else {
                         Log.v(TAG, "jaebaek getSandbox trace is null! tid=" + tid);
                     }
+
                     Log.v(TAG, "["+start+"] jaebaek getSandbox ----<");
                 } else {
                     ret = gp.grantedPermissions;
@@ -2296,14 +2301,16 @@ public class PackageManagerService extends IPackageManager.Stub {
                     String[] trace = DdmVmInternal.getStackTraceBySysTid(pid, tid).split(" ");
                     if (trace != null) {
                         for(String method : trace){
-                            for(String name : gp.sandboxNames){
+                            for(int i = 0;i < gp.sandboxNames.size();++i){
+                                String name = gp.sandboxNames.get(i);
+                            //for(String name : gp.sandboxNames){
                                 if (isPrefixOfMethod(method, name)) {
                                     if (ret == null)
                                         ret = new HashSet<Integer>(
-                                                intArrayToHashSet(gp.sandboxGidMap.get(name)));
+                                                intArrayToHashSet(gp.sandboxGidMap.get(i)));
                                     else
                                         ret.retainAll(
-                                                intArrayToHashSet(gp.sandboxGidMap.get(name)));
+                                                intArrayToHashSet(gp.sandboxGidMap.get(i)));
                                     break;
                                 }
                             }
@@ -2344,8 +2351,10 @@ public class PackageManagerService extends IPackageManager.Stub {
                 if (gp.sandboxes != null) {
                     if (ret == null)
                         ret = new HashMap<String, ArrayList<String>>();
-                    for(String name : gp.sandboxes.keySet()){
-                        HashSet<String> sb = gp.sandboxes.get(name);
+                    for(int i = 0;i < gp.sandboxNames.size();++i){
+                        String name = gp.sandboxNames.get(i);
+                    //for(String name : gp.sandboxes.keySet()){
+                        HashSet<String> sb = gp.sandboxes.get(i);
                         if (sb != null && !sb.isEmpty())
                             ret.put(name, new ArrayList<String>(sb));
                     }
@@ -2375,8 +2384,10 @@ public class PackageManagerService extends IPackageManager.Stub {
                 if (gp.sandboxGidMap != null) {
                     if (ret == null)
                         ret = new HashMap<String, ArrayList<Integer>>();
-                    for(String name : gp.sandboxGidMap.keySet()){
-                        HashSet<Integer> sb = intArrayToHashSet(gp.sandboxGidMap.get(name));
+                    for(int i = 0;i < gp.sandboxNames.size();++i){
+                        String name = gp.sandboxNames.get(i);
+                    //for(String name : gp.sandboxGidMap.keySet()){
+                        HashSet<Integer> sb = intArrayToHashSet(gp.sandboxGidMap.get(i));
                         if (sb != null && !sb.isEmpty())
                             ret.put(name, new ArrayList<Integer>(sb));
                     }
@@ -5767,8 +5778,10 @@ public class PackageManagerService extends IPackageManager.Stub {
         }
 
         if (pkg.sandboxes != null && pkg.sandboxes.size() > 0) {
-            gp.sandboxes = new HashMap<String, HashSet<String>>();
-            gp.sandboxGidMap = new HashMap<String, int[]>();
+            gp.sandboxes = new ArrayList<HashSet<String>>();
+            gp.sandboxNames = new ArrayList<String>();
+            gp.sandboxGidMap = new ArrayList<int[]>();
+            Log.i(TAG, "jaebaek install package:" + pkg.packageName);
             /*
              * jaebaek: Note that exceptions are not handled
              * */
@@ -5777,6 +5790,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                 if (NN > 0) {
                     HashSet<String> grantedPermissionsForSandbox
                         = new HashSet<String>();
+                    int [] gidsForSandbox = mGlobalGids;
                     for (int i=0; i<NN; i++) {
                         final String name = sbox.requestedPermissions.get(i);
                         final BasePermission bp = mSettings.mPermissions.get(name);
@@ -5819,65 +5833,29 @@ public class PackageManagerService extends IPackageManager.Stub {
                             }
                             if (allowed) {
                                 if (!grantedPermissionsForSandbox.contains(perm)) {
-                                    // jaebaek: add perm to this sandbox
+                                    changedPermission = true;
                                     grantedPermissionsForSandbox.add(perm);
+                                    gidsForSandbox = appendInts(gidsForSandbox, bp.gids);
                                 }
                                 if (!ps.haveGids) {
-                                    int[] sboxGids = appendInts(mGlobalGids, bp.gids);
-                                    gp.sandboxGidMap.put(sbox.sandboxName, sboxGids);
+                                    gidsForSandbox = appendInts(gidsForSandbox, bp.gids);
                                 }
                             }
                         } else {
                             if (grantedPermissionsForSandbox.remove(perm)) {
-                                int[] sboxGids = gp.sandboxGidMap.get(sbox.sandboxName);
-                                sboxGids = removeInts(sboxGids, bp.gids);
-                                gp.sandboxGidMap.put(sbox.sandboxName, sboxGids);
+                                changedPermission = true;
+                                gidsForSandbox = removeInts(gidsForSandbox, bp.gids);
                             }
                         }
                     }
-                    gp.sandboxes.put(sbox.sandboxName, grantedPermissionsForSandbox);
+                    gp.sandboxes.add(grantedPermissionsForSandbox);
+                    gp.sandboxGidMap.add(gidsForSandbox);
+                    gp.sandboxNames.add(sbox.sandboxName);
                 } else {
-                    gp.sandboxes.put(sbox.sandboxName, null);
+                    gp.sandboxes.add(null);
+                    gp.sandboxGidMap.add(null);
+                    gp.sandboxNames.add(sbox.sandboxName);
                 }
-            }
-
-            /* sort sandbox names in partial order */
-            ArrayList<String> sandboxNames = new ArrayList<String>(gp.sandboxes.keySet());
-            int [] sandboxNamePrefixes = new int[sandboxNames.size()];
-            for (int i = 0; i < sandboxNames.size(); ++i) {
-                int prefix = -1;
-                for (int j = 0; j < sandboxNames.size(); ++j) {
-                    if (j == i)
-                        continue;
-                    if (isPrefixOfMethod(sandboxNames.get(i), sandboxNames.get(j))) {
-                        if ((prefix == -1)
-                                || (isPrefixOfMethod(sandboxNames.get(j),
-                                        sandboxNames.get(prefix))))
-                            prefix = j;
-                    }
-                }
-                sandboxNamePrefixes[i] = prefix;
-            }
-            gp.sandboxNames = new ArrayList<String>();
-            while (gp.sandboxNames.size() < sandboxNames.size()) {
-                for (int i = 0; i < sandboxNamePrefixes.length; ++i) {
-                    if (sandboxNames.get(i) != null) {
-                        if ((sandboxNamePrefixes[i] == -1)
-                                || (sandboxNames.get(sandboxNamePrefixes[i]) == null)) {
-                            gp.sandboxNames.add(sandboxNames.get(i));
-                            sandboxNames.set(i, null);
-                        }
-                    }
-                }
-            }
-
-            /* reverse array */
-            int mid = gp.sandboxNames.size() / 2;
-            for (int i = 0;i < mid;++i) {
-                String tmp = gp.sandboxNames.get(i);
-                gp.sandboxNames.set(i,
-                        gp.sandboxNames.get(gp.sandboxNames.size() - i - 1));
-                gp.sandboxNames.set(gp.sandboxNames.size() - i - 1, tmp);
             }
         }
 
