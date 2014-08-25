@@ -2236,26 +2236,14 @@ public class PackageManagerService extends IPackageManager.Stub {
                 GrantedPermissions gp = (GrantedPermissions)obj;
                 if (gp.sandboxes != null) {
                     Log.v(TAG, "["+start+"] jaebaek getSandbox ---->");
-                    String raw_trace = DdmVmInternal.getStackTraceBySysTid(pid, tid);
-
-                    if (raw_trace != null) {
-                        length = raw_trace.length();
-
-                        String[] trace = raw_trace.split(" ");
-                        if (trace != null) {
-                            for(String method : trace){
-                                for(int i = 0;i < gp.sandboxNames.size();++i){
-                                    String name = gp.sandboxNames.get(i);
-                                //for(String name : gp.sandboxNames){
-                                    if (isPrefixOfMethod(method, name)) {
-                                        if (ret == null)
-                                            ret = new HashSet<String>(gp.sandboxes.get(i));
-                                        else
-                                            ret.retainAll(gp.sandboxes.get(i));
-                                        break;
-                                    }
-                                }
-                            }
+                    int [] trace = DdmVmInternal.getStackTraceBySysTid(pid, tid);
+                    if (trace != null) {
+                        length = 4*trace.length;
+                        for(int i : trace) {
+                            if (ret == null)
+                                ret = new HashSet<String>(gp.sandboxes.get(i));
+                            else
+                                ret.retainAll(gp.sandboxes.get(i));
                         }
                     } else {
                         Log.v(TAG, "jaebaek getSandbox trace is null! tid=" + tid);
@@ -2298,27 +2286,15 @@ public class PackageManagerService extends IPackageManager.Stub {
             if (obj != null) {
                 GrantedPermissions gp = (GrantedPermissions)obj;
                 if (gp.sandboxGidMap != null) {
-                    String[] trace = DdmVmInternal.getStackTraceBySysTid(pid, tid).split(" ");
-                    if (trace != null) {
-                        for(String method : trace){
-                            for(int i = 0;i < gp.sandboxNames.size();++i){
-                                String name = gp.sandboxNames.get(i);
-                            //for(String name : gp.sandboxNames){
-                                if (isPrefixOfMethod(method, name)) {
-                                    if (ret == null)
-                                        ret = new HashSet<Integer>(
-                                                intArrayToHashSet(gp.sandboxGidMap.get(i)));
-                                    else
-                                        ret.retainAll(
-                                                intArrayToHashSet(gp.sandboxGidMap.get(i)));
-                                    break;
-                                }
-                            }
-                        }
+                    int [] trace = DdmVmInternal.getStackTraceBySysTid(pid, tid);
+                    for(int i : trace) {
+                        if (ret == null)
+                            ret = intArrayToHashSet(gp.sandboxGidMap.get(i));
+                        else
+                            ret.retainAll(intArrayToHashSet(gp.sandboxGidMap.get(i)));
                     }
                 } else {
-                    ret = new HashSet<Integer>();
-                    for (int gid : gp.gids) ret.add(gid);
+                    ret = intArrayToHashSet(gp.gids);
                 }
             }
         }
