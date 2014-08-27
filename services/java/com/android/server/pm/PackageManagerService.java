@@ -2312,6 +2312,24 @@ public class PackageManagerService extends IPackageManager.Stub {
     }
 
     @Override
+    public String[] getSandboxNames(int uid) {
+        String [] ret = null;
+        synchronized (mPackages) {
+            Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
+            if (obj != null) {
+                GrantedPermissions gp = (GrantedPermissions)obj;
+                if (gp.sandboxNames != null) {
+                    ret = new String[gp.sandboxNames.size()];
+                    for(int i = 0;i < gp.sandboxNames.size();++i){
+                        ret[i] = gp.sandboxNames.get(i);
+                    }
+                }
+            }
+        }
+        return ret;
+    }
+
+    @Override
     public HashMap<String, ArrayList<String>> getAllSandbox(int uid) {
         HashMap<String, ArrayList<String>> ret = null;
         synchronized (mPackages) {
@@ -2329,7 +2347,6 @@ public class PackageManagerService extends IPackageManager.Stub {
                         ret = new HashMap<String, ArrayList<String>>();
                     for(int i = 0;i < gp.sandboxNames.size();++i){
                         String name = gp.sandboxNames.get(i);
-                    //for(String name : gp.sandboxes.keySet()){
                         HashSet<String> sb = gp.sandboxes.get(i);
                         if (sb != null && !sb.isEmpty())
                             ret.put(name, new ArrayList<String>(sb));
@@ -2362,7 +2379,6 @@ public class PackageManagerService extends IPackageManager.Stub {
                         ret = new HashMap<String, ArrayList<Integer>>();
                     for(int i = 0;i < gp.sandboxNames.size();++i){
                         String name = gp.sandboxNames.get(i);
-                    //for(String name : gp.sandboxGidMap.keySet()){
                         HashSet<Integer> sb = intArrayToHashSet(gp.sandboxGidMap.get(i));
                         if (sb != null && !sb.isEmpty())
                             ret.put(name, new ArrayList<Integer>(sb));

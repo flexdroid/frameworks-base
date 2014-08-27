@@ -1764,6 +1764,7 @@ public abstract class PackageManager {
     /**
      * jaebaek: to check out sandbox information
      */
+    public abstract String[] getSandboxNames(int uid);
     public abstract Map getAllSandbox(int uid);
     public abstract Map getAllSandboxGid(int uid);
 

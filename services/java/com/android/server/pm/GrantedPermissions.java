@@ -19,7 +19,6 @@ package com.android.server.pm;
 import android.content.pm.ApplicationInfo;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 
 class GrantedPermissions {

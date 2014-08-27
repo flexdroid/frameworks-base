@@ -178,6 +178,11 @@ public class MockPackageManager extends PackageManager {
     }
 
     @Override
+    public String[] getSandboxNames(int uid) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public Map getAllSandbox(int uid) {
         throw new UnsupportedOperationException();
     }

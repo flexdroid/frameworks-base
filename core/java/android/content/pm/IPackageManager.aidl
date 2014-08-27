@@ -85,6 +85,8 @@ interface IPackageManager {
 
     List getCurrentSandboxGids(int uid, int pid, int tid);
 
+    String[] getSandboxNames(int uid);
+
     Map getAllSandbox(int uid);
 
     Map getAllSandboxGid(int uid);

@@ -343,6 +343,15 @@ final class ApplicationPackageManager extends PackageManager {
     }
 
     @Override
+    public String[] getSandboxNames(int uid) {
+        try {
+            return mPM.getSandboxNames(uid);
+        } catch (RemoteException e) {
+            throw new RuntimeException("Package manager has died", e);
+        }
+    }
+
+    @Override
     public Map getAllSandbox(int uid) {
         try {
             return mPM.getAllSandbox(uid);
