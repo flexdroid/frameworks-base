@@ -1053,9 +1053,6 @@ public class PackageManagerService extends IPackageManager.Stub {
     static final String CHANNEL_DEVICE_NAME = "/dev/stack_inspection_channel";
     static final int CHANNEL_PM_WAIT = 3;
     static final int CHANNEL_PM_RESPONSE = 5;
-    static final int GET_GIDS = 1;
-    static final int GET_SANDBOXNAMES = 0;
-    static final int GID_DELIMITER = -1;
     static final String SANDBOXNAME_DELIMITER = " ";
     private static PackageManagerService mPM;
 
@@ -1067,51 +1064,27 @@ public class PackageManagerService extends IPackageManager.Stub {
                 try {
                     FileDescriptor fd = Libcore.os.open(CHANNEL_DEVICE_NAME, O_RDWR, 0);
                     while(true) {
-                        int[] req = new int[2]; // uid, gids or sandbox name
-                        Libcore.os.ioctlIntArray(fd, CHANNEL_PM_WAIT, req);
+                        int[] uid = new int[1];
+                        Libcore.os.ioctlIntArray(fd, CHANNEL_PM_WAIT, uid);
 
                         synchronized (mPM.mPackages) {
                             Object obj = mPM.mSettings.getUserIdLPr(
-                                UserHandle.getAppId(req[0]));
+                                UserHandle.getAppId(uid[0]));
                             if (obj != null) {
                                 GrantedPermissions gp = (GrantedPermissions)obj;
-                                if (req[1] == GET_GIDS) {
-                                    // create gids int array
-                                    int [] res = null;
-                                    if (gp.sandboxGidMap != null) {
-                                        int res_size = 0;
-                                        for (int i = 0; i < gp.sandboxGidMap.size(); ++i) {
-                                            res_size += gp.sandboxGidMap.get(i).length;
-                                            ++res_size;
-                                        }
-                                        res = new int[res_size+1];
-                                        res[0] = res_size;
-
-                                        // copy gids
-                                        int res_offset = 1;
-                                        for (int i = 0; i < gp.sandboxGidMap.size(); ++i) {
-                                            for (int gid: gp.sandboxGidMap.get(i)) {
-                                                res[res_offset++] = gid;
-                                            }
-                                            res[res_offset++] = GID_DELIMITER;
-                                        }
+                                // create sandbox names string
+                                String res = ""; /* res must not be null */
+                                if (gp.sandboxNames != null) {
+                                    for (int i = 0; i < gp.sandboxNames.size(); ++i) {
+                                        res += gp.sandboxNames.get(i);
+                                        res += SANDBOXNAME_DELIMITER;
                                     }
-                                    Libcore.os.ioctlIntArray(fd, CHANNEL_PM_RESPONSE, res);
-                                } else if (req[1] == GET_SANDBOXNAMES) {
-                                    // create sandbox names string
-                                    String res = ""; /* res must not be null */
-                                    if (gp.sandboxNames != null) {
-                                        for (int i = 0; i < gp.sandboxNames.size(); ++i) {
-                                            res += gp.sandboxNames.get(i);
-                                            res += SANDBOXNAME_DELIMITER;
-                                        }
-                                    }
-                                    Libcore.os.ioctlString(fd, CHANNEL_PM_RESPONSE, res,
-                                            res.length());
-                                } else {
-                                    // just to wake up stack inspector
-                                    Libcore.os.ioctlIntArray(fd, CHANNEL_PM_RESPONSE, null);
                                 }
+                                Libcore.os.ioctlString(fd, CHANNEL_PM_RESPONSE, res,
+                                        res.length());
+                            } else {
+                                // just to wake up stack inspector
+                                Libcore.os.ioctlIntArray(fd, CHANNEL_PM_RESPONSE, null);
                             }
                         }
                     }
