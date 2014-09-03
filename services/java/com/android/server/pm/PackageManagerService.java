@@ -1045,16 +1045,66 @@ public class PackageManagerService extends IPackageManager.Stub {
                 factoryTest, onlyCore);
         ServiceManager.addService("package", m);
         DdmVmInternal.registerPM();
+        m.registerGIDS();
         startGidsInpection(m);
         return m;
+    }
+
+    private final void registerGIDS() {
+        try {
+            FileDescriptor fd = Libcore.os.open(CHANNEL_DEVICE_NAME, O_RDWR, 0);
+            int size = 1; /* uid_size */
+            for (int uid: uid_gids.keySet()) {
+                ++size; /* uid */
+                ++size; /* sbx_size */
+                ArrayList<int[]> sbx_gids = uid_gids.get(uid);
+                if (sbx_gids != null) {
+                    for (int [] gids: sbx_gids) {
+                        ++size; /* gid_size */
+                        if (gids != null) {
+                            size += gids.length; /* gids */
+                        }
+                    }
+                }
+            }
+            int [] gids_map = new int[size];
+            size = 0;
+            gids_map[size++] = uid_gids.size();
+            for (int uid: uid_gids.keySet()) {
+                gids_map[size++] = uid;
+                ArrayList<int[]> sbx_gids = uid_gids.get(uid);
+                if (sbx_gids != null) {
+                    gids_map[size++] = sbx_gids.size();
+                    for (int [] gids: sbx_gids) {
+                        if (gids != null) {
+                            gids_map[size++] = gids.length;
+                            for (int gid: gids) {
+                                gids_map[size++] = gid;
+                            }
+                        } else {
+                            gids_map[size++] = 0;
+                        }
+                    }
+                } else {
+                    gids_map[size++] = 0;
+                }
+            }
+            Libcore.os.ioctlIntArray(fd, CHANNEL_REGISTER_GIDS, gids_map);
+            Libcore.os.close(fd);
+        } catch (ErrnoException e) {
+            Slog.e(TAG, "[GIDS_INSPECT] Error while registering gids... " + e);
+        }
     }
 
     //jaebaek: for communication with channel device
     static final String CHANNEL_DEVICE_NAME = "/dev/stack_inspection_channel";
     static final int CHANNEL_PM_WAIT = 3;
     static final int CHANNEL_PM_RESPONSE = 5;
+    static final int CHANNEL_REGISTER_GIDS = 6;
     static final String SANDBOXNAME_DELIMITER = " ";
     private static PackageManagerService mPM;
+    private final HashMap<Integer, ArrayList<int[]>> uid_gids
+        = new HashMap<Integer, ArrayList<int[]>>();
 
     public static final void startGidsInpection(PackageManagerService pm) {
         mPM = pm;
@@ -5822,6 +5872,9 @@ public class PackageManagerService extends IPackageManager.Stub {
             gp.sandboxNames = new ArrayList<String>();
             gp.sandboxGidMap = new ArrayList<int[]>();
             Log.i(TAG, "jaebaek install package:" + pkg.packageName);
+
+            uid_gids.put(ps.appId, gp.sandboxGidMap);
+
             /*
              * jaebaek: Note that exceptions are not handled
              * */
