@@ -1143,6 +1143,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                 }
             }
         }).start();
+        Log.v(TAG, "startGidsInpection done");
     }
 
     static String[] splitString(String str, char sep) {
@@ -2324,8 +2325,10 @@ public class PackageManagerService extends IPackageManager.Stub {
     }
 
     private HashSet<String> getSandbox(int uid, int pid, int tid) {
-        int length = 0;
+        /*
+        boolean doLog = false;
         long start = android.os.SystemClock.currentTimeMicro();
+        */
 
         HashSet<String> ret = null;
         synchronized (mPackages) {
@@ -2333,10 +2336,9 @@ public class PackageManagerService extends IPackageManager.Stub {
             if (obj != null) {
                 GrantedPermissions gp = (GrantedPermissions)obj;
                 if (gp.sandboxes != null) {
-                    Log.v(TAG, "["+start+"] jaebaek getSandbox ---->");
+                    // doLog = true;
                     int [] trace = DdmVmInternal.getStackTraceBySysTid(pid, tid);
                     if (trace != null) {
-                        length = 4*trace.length;
                         for(int i : trace) {
                             if (ret == null)
                                 ret = new HashSet<String>(gp.sandboxes.get(i));
@@ -2344,23 +2346,25 @@ public class PackageManagerService extends IPackageManager.Stub {
                                 ret.retainAll(gp.sandboxes.get(i));
                         }
                     } else {
-                        Log.v(TAG, "jaebaek getSandbox trace is null! tid=" + tid);
+                        String [] pkgs = getPackagesForUid(uid);
+                        pkgs = (pkgs == null ? new String[] { "" } : pkgs);
+                        Log.v(TAG, "jaebaek getSandbox trace is null: " + pkgs[0]);
                     }
-
-                    Log.v(TAG, "["+start+"] jaebaek getSandbox ----<");
                 } else {
                     ret = gp.grantedPermissions;
                 }
             }
         }
 
-        long end = android.os.SystemClock.currentTimeMicro();
-        if (length != 0) {
+        /*
+        if (doLog) {
+            long end = android.os.SystemClock.currentTimeMicro();
             String [] pkgs = getPackagesForUid(uid);
             pkgs = (pkgs == null ? new String[] { "" } : pkgs);
             Log.v(TAG, "["+start+"] jaebaek getSandbox: " + pkgs[0]
-                    + ", " + (end - start) + " us, " + length + " bytes");
+                    + ", " + (end - start) + " us");
         }
+        */
         return ret;
     }
 
@@ -5914,21 +5918,18 @@ public class PackageManagerService extends IPackageManager.Stub {
                         }
 
                         if (allowed) {
-                            if (!isSystemApp(ps) && ps.permissionsFixed) {
-                                // If this is an existing, non-system package, then
-                                // we can't add any new permissions to it.
-                                if (!grantedPermissionsForSandbox.contains(perm)) {
-                                    // Except...  if this is a permission that was added
-                                    // to the platform (note: need to only do this when
-                                    // updating the platform).
-                                    allowed = isNewPlatformPermissionForPackage(perm, pkg);
-                                }
-                            }
                             if (allowed) {
                                 if (!grantedPermissionsForSandbox.contains(perm)) {
                                     changedPermission = true;
                                     grantedPermissionsForSandbox.add(perm);
+                                    Log.v(TAG, "grantedPermissionsForSandbox.add: " + perm);
                                     gidsForSandbox = appendInts(gidsForSandbox, bp.gids);
+                                    if (bp.gids != null) {
+                                        Log.v(TAG, "gids---->");
+                                        for (int gid: bp.gids)
+                                            Log.v(TAG, ""+gid);
+                                        Log.v(TAG, "gids----<");
+                                    }
                                 }
                                 if (!ps.haveGids) {
                                     gidsForSandbox = appendInts(gidsForSandbox, bp.gids);
