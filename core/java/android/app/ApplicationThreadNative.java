@@ -636,6 +636,14 @@ public abstract class ApplicationThreadNative extends Binder
     {
         return this;
     }
+
+    private int tid;
+    public void setThreadId(int tid) {
+        this.tid = tid;
+    }
+    public int getThreadId() {
+        return tid;
+    }
 }
 
 class ApplicationThreadProxy implements IApplicationThread {
@@ -1265,5 +1273,13 @@ class ApplicationThreadProxy implements IApplicationThread {
         provider.writeToParcel(data, 0);
         mRemote.transact(SCHEDULE_INSTALL_PROVIDER_TRANSACTION, data, null, IBinder.FLAG_ONEWAY);
         data.recycle();
+    }
+
+    private int tid;
+    public void setThreadId(int tid) {
+        this.tid = tid;
+    }
+    public int getThreadId() {
+        return tid;
     }
 }

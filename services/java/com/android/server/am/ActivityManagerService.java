@@ -5690,6 +5690,28 @@ public final class ActivityManagerService extends ActivityManagerNative
         }
     }
 
+    /* jaebaek: Specialized checkComponentPermission for calling thread check */
+    int checkComponentPermission(String permission, int pid, int uid, int tid,
+            int owningUid, boolean exported) {
+        // We might be performing an operation on behalf of an indirect binder
+        // invocation, e.g. via {@link #openContentUri}.  Check and adjust the
+        // client identity accordingly before proceeding.
+        Identity tlsIdentity = sCallerIdentity.get();
+        if (tlsIdentity != null) {
+            Slog.d(TAG, "checkComponentPermission() adjusting {pid,uid} to {"
+                    + tlsIdentity.pid + "," + tlsIdentity.uid + "}");
+            uid = tlsIdentity.uid;
+            pid = tlsIdentity.pid;
+        }
+
+        if (pid == MY_PID) {
+            return PackageManager.PERMISSION_GRANTED;
+        }
+
+        return ActivityManager.checkComponentPermission(permission, uid, pid, tid,
+                owningUid, exported);
+    }
+
     /**
      * This can be called with or without the global lock held.
      */

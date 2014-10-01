@@ -91,6 +91,8 @@ interface IPackageManager {
 
     Map getAllSandboxGid(int uid);
     
+    int checkThreadPermission(String permName, int uid, int pid, int tid);
+
     int checkUidPermission(String permName, int uid);
     
     boolean addPermission(in PermissionInfo info);

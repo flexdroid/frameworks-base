@@ -2491,6 +2491,33 @@ public class PackageManagerService extends IPackageManager.Stub {
         return ret;
     }
 
+    public int checkThreadPermission(String permName, int uid, int pid, int tid) {
+        HashSet<String> sbox = getSandbox(uid, pid, tid);
+        synchronized (mPackages) {
+            if (sbox != null) {
+                if (sbox.contains(permName))
+                    return PackageManager.PERMISSION_GRANTED;
+                else
+                    return PackageManager.PERMISSION_DENIED;
+            }
+        }
+        synchronized (mPackages) {
+            Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
+            if (obj != null) {
+                GrantedPermissions gp = (GrantedPermissions)obj;
+                if (gp.grantedPermissions.contains(permName)) {
+                    return PackageManager.PERMISSION_GRANTED;
+                }
+            } else {
+                HashSet<String> perms = mSystemPermissions.get(uid);
+                if (perms != null && perms.contains(permName)) {
+                    return PackageManager.PERMISSION_GRANTED;
+                }
+            }
+        }
+        return PackageManager.PERMISSION_DENIED;
+    }
+
     public int checkUidPermission(String permName, int uid) {
         if (Binder.getCallingUid() == uid) {
             HashSet<String> sbox = getSandbox(uid, Binder.getCallingPid(),

@@ -1083,11 +1083,13 @@ public final class ActivityStackSupervisor {
         int err = ActivityManager.START_SUCCESS;
 
         ProcessRecord callerApp = null;
+        int callingTid = -1;
         if (caller != null) {
             callerApp = mService.getRecordForAppLocked(caller);
             if (callerApp != null) {
                 callingPid = callerApp.pid;
                 callingUid = callerApp.info.uid;
+                callingTid = caller.getThreadId();
             } else {
                 Slog.w(TAG, "Unable to find app for caller " + caller
                       + " (pid=" + callingPid + ") when starting: "
@@ -1175,7 +1177,7 @@ public final class ActivityStackSupervisor {
         final int startAnyPerm = mService.checkPermission(
                 START_ANY_ACTIVITY, callingPid, callingUid);
         final int componentPerm = mService.checkComponentPermission(aInfo.permission, callingPid,
-                callingUid, aInfo.applicationInfo.uid, aInfo.exported);
+                callingUid, callingTid, aInfo.applicationInfo.uid, aInfo.exported);
         if (startAnyPerm != PERMISSION_GRANTED && componentPerm != PERMISSION_GRANTED) {
             if (resultRecord != null) {
                 resultStack.sendActivityResultLocked(-1,

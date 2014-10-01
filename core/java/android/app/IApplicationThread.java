@@ -138,6 +138,8 @@ public interface IApplicationThread extends IInterface {
             throws RemoteException;
     void setProcessState(int state) throws RemoteException;
     void scheduleInstallProvider(ProviderInfo provider) throws RemoteException;
+    void setThreadId(int tid);
+    int getThreadId();
 
     String descriptor = "android.app.IApplicationThread";
 

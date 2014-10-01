@@ -120,6 +120,7 @@ public abstract class ActivityManagerNative extends Binder implements IActivityM
             data.enforceInterface(IActivityManager.descriptor);
             IBinder b = data.readStrongBinder();
             IApplicationThread app = ApplicationThreadNative.asInterface(b);
+            app.setThreadId(Binder.getCallingThreadId());
             String callingPackage = data.readString();
             Intent intent = Intent.CREATOR.createFromParcel(data);
             String resolvedType = data.readString();

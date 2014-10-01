@@ -2106,6 +2106,45 @@ public class ActivityManager {
     }
 
     /** @hide */
+    public static int checkComponentPermission(String permission, int uid, int pid, int tid,
+            int owningUid, boolean exported) {
+        // Root, system server get to do everything.
+        if (uid == 0 || uid == Process.SYSTEM_UID) {
+            return PackageManager.PERMISSION_GRANTED;
+        }
+        // Isolated processes don't get any permissions.
+        if (UserHandle.isIsolated(uid)) {
+            return PackageManager.PERMISSION_DENIED;
+        }
+        // If there is a uid that owns whatever is being accessed, it has
+        // blanket access to it regardless of the permissions it requires.
+        if (owningUid >= 0 && UserHandle.isSameApp(uid, owningUid)) {
+            return PackageManager.PERMISSION_GRANTED;
+        }
+        // If the target is not exported, then nobody else can get to it.
+        if (!exported) {
+            /*
+            RuntimeException here = new RuntimeException("here");
+            here.fillInStackTrace();
+            Slog.w(TAG, "Permission denied: checkComponentPermission() owningUid=" + owningUid,
+                    here);
+            */
+            return PackageManager.PERMISSION_DENIED;
+        }
+        if (permission == null) {
+            return PackageManager.PERMISSION_GRANTED;
+        }
+        try {
+            return AppGlobals.getPackageManager()
+                    .checkThreadPermission(permission, uid, pid, tid);
+        } catch (RemoteException e) {
+            // Should never happen, but if it does... deny!
+            Slog.e(TAG, "PackageManager is dead?!?", e);
+        }
+        return PackageManager.PERMISSION_DENIED;
+    }
+
+    /** @hide */
     public static int checkComponentPermission(String permission, int uid,
             int owningUid, boolean exported) {
         // Root, system server get to do everything.
