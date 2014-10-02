@@ -275,6 +275,114 @@ public final class ActiveServices {
 
     ComponentName startServiceLocked(IApplicationThread caller,
             Intent service, String resolvedType,
+            int callingUid, int callingPid, int callingTid, int userId) {
+        if (DEBUG_DELAYED_STARTS) Slog.v(TAG, "startService: " + service
+                + " type=" + resolvedType + " args=" + service.getExtras());
+
+        final boolean callerFg;
+        if (caller != null) {
+            final ProcessRecord callerApp = mAm.getRecordForAppLocked(caller);
+            if (callerApp == null) {
+                throw new SecurityException(
+                        "Unable to find app for caller " + caller
+                        + " (pid=" + Binder.getCallingPid()
+                        + ") when starting service " + service);
+            }
+            callerFg = callerApp.setSchedGroup != Process.THREAD_GROUP_BG_NONINTERACTIVE;
+        } else {
+            callerFg = true;
+        }
+
+
+        ServiceLookupResult res =
+            retrieveServiceLocked(service, resolvedType,
+                    callingUid, callingPid, callingTid, userId, true, callerFg);
+        if (res == null) {
+            return null;
+        }
+        if (res.record == null) {
+            return new ComponentName("!", res.permission != null
+                    ? res.permission : "private to package");
+        }
+        ServiceRecord r = res.record;
+        NeededUriGrants neededGrants = mAm.checkGrantUriPermissionFromIntentLocked(
+                callingUid, r.packageName, service, service.getFlags(), null);
+        if (unscheduleServiceRestartLocked(r, callingUid, false)) {
+            if (DEBUG_SERVICE) Slog.v(TAG, "START SERVICE WHILE RESTART PENDING: " + r);
+        }
+        r.lastActivity = SystemClock.uptimeMillis();
+        r.startRequested = true;
+        r.delayedStop = false;
+        r.pendingStarts.add(new ServiceRecord.StartItem(r, false, r.makeNextStartId(),
+                service, neededGrants));
+
+        final ServiceMap smap = getServiceMap(r.userId);
+        boolean addToStarting = false;
+        if (!callerFg && r.app == null && mAm.mStartedUsers.get(r.userId) != null) {
+            ProcessRecord proc = mAm.getProcessRecordLocked(r.processName, r.appInfo.uid, false);
+            if (proc == null || proc.curProcState > ActivityManager.PROCESS_STATE_RECEIVER) {
+                // If this is not coming from a foreground caller, then we may want
+                // to delay the start if there are already other background services
+                // that are starting.  This is to avoid process start spam when lots
+                // of applications are all handling things like connectivity broadcasts.
+                // We only do this for cached processes, because otherwise an application
+                // can have assumptions about calling startService() for a service to run
+                // in its own process, and for that process to not be killed before the
+                // service is started.  This is especially the case for receivers, which
+                // may start a service in onReceive() to do some additional work and have
+                // initialized some global state as part of that.
+                if (DEBUG_DELAYED_SERVICE) Slog.v(TAG, "Potential start delay of " + r + " in "
+                        + proc);
+                if (r.delayed) {
+                    // This service is already scheduled for a delayed start; just leave
+                    // it still waiting.
+                    if (DEBUG_DELAYED_STARTS) Slog.v(TAG, "Continuing to delay: " + r);
+                    return r.name;
+                }
+                if (smap.mStartingBackground.size() >= mMaxStartingBackground) {
+                    // Something else is starting, delay!
+                    Slog.i(TAG, "Delaying start of: " + r);
+                    smap.mDelayedStartList.add(r);
+                    r.delayed = true;
+                    return r.name;
+                }
+                if (DEBUG_DELAYED_STARTS) Slog.v(TAG, "Not delaying: " + r);
+                addToStarting = true;
+            } else if (proc.curProcState >= ActivityManager.PROCESS_STATE_SERVICE) {
+                // We slightly loosen when we will enqueue this new service as a background
+                // starting service we are waiting for, to also include processes that are
+                // currently running other services or receivers.
+                addToStarting = true;
+                if (DEBUG_DELAYED_STARTS) Slog.v(TAG, "Not delaying, but counting as bg: " + r);
+            } else if (DEBUG_DELAYED_STARTS) {
+                StringBuilder sb = new StringBuilder(128);
+                sb.append("Not potential delay (state=").append(proc.curProcState)
+                        .append(' ').append(proc.adjType);
+                String reason = proc.makeAdjReason();
+                if (reason != null) {
+                    sb.append(' ');
+                    sb.append(reason);
+                }
+                sb.append("): ");
+                sb.append(r.toString());
+                Slog.v(TAG, sb.toString());
+            }
+        } else if (DEBUG_DELAYED_STARTS) {
+            if (callerFg) {
+                Slog.v(TAG, "Not potential delay (callerFg=" + callerFg + " uid="
+                        + callingUid + " pid=" + callingPid + "): " + r);
+            } else if (r.app != null) {
+                Slog.v(TAG, "Not potential delay (cur app=" + r.app + "): " + r);
+            } else {
+                Slog.v(TAG, "Not potential delay (user " + r.userId + " not started): " + r);
+            }
+        }
+
+        return startServiceInnerLocked(smap, service, r, callerFg, addToStarting);
+    }
+
+    ComponentName startServiceLocked(IApplicationThread caller,
+            Intent service, String resolvedType,
             int callingPid, int callingUid, int userId) {
         if (DEBUG_DELAYED_STARTS) Slog.v(TAG, "startService: " + service
                 + " type=" + resolvedType + " args=" + service.getExtras());
@@ -939,6 +1047,106 @@ public final class ActiveServices {
                 performServiceRestartLocked(mService);
             }
         }
+    }
+
+    private ServiceLookupResult retrieveServiceLocked(Intent service,
+            String resolvedType, int callingUid, int callingPid, int callingTid,
+            int userId, boolean createIfNeeded, boolean callingFromFg) {
+        ServiceRecord r = null;
+        if (DEBUG_SERVICE) Slog.v(TAG, "retrieveServiceLocked: " + service
+                + " type=" + resolvedType + " callingUid=" + callingUid);
+
+        userId = mAm.handleIncomingUser(callingPid, callingUid, userId,
+                false, true, "service", null);
+
+        ServiceMap smap = getServiceMap(userId);
+        final ComponentName comp = service.getComponent();
+        if (comp != null) {
+            r = smap.mServicesByName.get(comp);
+        }
+        if (r == null) {
+            Intent.FilterComparison filter = new Intent.FilterComparison(service);
+            r = smap.mServicesByIntent.get(filter);
+        }
+        if (r == null) {
+            try {
+                ResolveInfo rInfo =
+                    AppGlobals.getPackageManager().resolveService(
+                                service, resolvedType,
+                                ActivityManagerService.STOCK_PM_FLAGS, userId);
+                ServiceInfo sInfo =
+                    rInfo != null ? rInfo.serviceInfo : null;
+                if (sInfo == null) {
+                    Slog.w(TAG, "Unable to start service " + service + " U=" + userId +
+                          ": not found");
+                    return null;
+                }
+                ComponentName name = new ComponentName(
+                        sInfo.applicationInfo.packageName, sInfo.name);
+                if (userId > 0) {
+                    if (mAm.isSingleton(sInfo.processName, sInfo.applicationInfo,
+                            sInfo.name, sInfo.flags)) {
+                        userId = 0;
+                        smap = getServiceMap(0);
+                    }
+                    sInfo = new ServiceInfo(sInfo);
+                    sInfo.applicationInfo = mAm.getAppInfoForUser(sInfo.applicationInfo, userId);
+                }
+                r = smap.mServicesByName.get(name);
+                if (r == null && createIfNeeded) {
+                    Intent.FilterComparison filter
+                            = new Intent.FilterComparison(service.cloneFilter());
+                    ServiceRestarter res = new ServiceRestarter();
+                    BatteryStatsImpl.Uid.Pkg.Serv ss = null;
+                    BatteryStatsImpl stats = mAm.mBatteryStatsService.getActiveStatistics();
+                    synchronized (stats) {
+                        ss = stats.getServiceStatsLocked(
+                                sInfo.applicationInfo.uid, sInfo.packageName,
+                                sInfo.name);
+                    }
+                    r = new ServiceRecord(mAm, ss, name, filter, sInfo, callingFromFg, res);
+                    res.setService(r);
+                    smap.mServicesByName.put(name, r);
+                    smap.mServicesByIntent.put(filter, r);
+
+                    // Make sure this component isn't in the pending list.
+                    for (int i=mPendingServices.size()-1; i>=0; i--) {
+                        ServiceRecord pr = mPendingServices.get(i);
+                        if (pr.serviceInfo.applicationInfo.uid == sInfo.applicationInfo.uid
+                                && pr.name.equals(name)) {
+                            mPendingServices.remove(i);
+                        }
+                    }
+                }
+            } catch (RemoteException ex) {
+                // pm is in same process, this will never happen.
+            }
+        }
+        if (r != null) {
+            if (mAm.checkComponentPermission(r.permission, callingPid,
+                    callingUid, callingTid, r.appInfo.uid, r.exported)
+                    != PackageManager.PERMISSION_GRANTED) {
+                if (!r.exported) {
+                    Slog.w(TAG, "Permission Denial: Accessing service " + r.name
+                            + " from pid=" + callingPid
+                            + ", uid=" + callingUid
+                            + " that is not exported from uid " + r.appInfo.uid);
+                    return new ServiceLookupResult(null, "not exported from uid "
+                            + r.appInfo.uid);
+                }
+                Slog.w(TAG, "Permission Denial: Accessing service " + r.name
+                        + " from pid=" + callingPid
+                        + ", uid=" + callingUid
+                        + " requires " + r.permission);
+                return new ServiceLookupResult(null, r.permission);
+            }
+            if (!mAm.mIntentFirewall.checkService(r.name, service, callingUid, callingPid,
+                    resolvedType, r.appInfo)) {
+                return null;
+            }
+            return new ServiceLookupResult(r, null);
+        }
+        return null;
     }
 
     private ServiceLookupResult retrieveServiceLocked(Intent service,

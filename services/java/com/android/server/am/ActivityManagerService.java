@@ -12642,9 +12642,10 @@ public final class ActivityManagerService extends ActivityManagerNative
         synchronized(this) {
             final int callingPid = Binder.getCallingPid();
             final int callingUid = Binder.getCallingUid();
+            final int callingTid = Binder.getCallingThreadId();
             final long origId = Binder.clearCallingIdentity();
             ComponentName res = mServices.startServiceLocked(caller, service,
-                    resolvedType, callingPid, callingUid, userId);
+                    resolvedType, callingUid, callingPid, callingTid, userId);
             Binder.restoreCallingIdentity(origId);
             return res;
         }
