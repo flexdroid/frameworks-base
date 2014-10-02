@@ -546,6 +546,11 @@ public class ContextWrapper extends Context {
     }
 
     @Override
+    public int checkThreadPermission(String permission, int uid, int pid, int tid) {
+        return mBase.checkThreadPermission(permission, uid, pid, tid);
+    }
+
+    @Override
     public int checkCallingPermission(String permission) {
         return mBase.checkCallingPermission(permission);
     }

@@ -207,6 +207,9 @@ public interface IActivityManager extends IInterface {
     public int checkPermission(String permission, int pid, int uid)
             throws RemoteException;
 
+    public int checkThreadPermission(String permission, int uid, int pid, int tid)
+            throws RemoteException;
+
     public int checkUriPermission(Uri uri, int pid, int uid, int mode)
             throws RemoteException;
     public void grantUriPermission(IApplicationThread caller, String targetPkg,
@@ -694,4 +697,5 @@ public interface IActivityManager extends IInterface {
     int RELEASE_PERSISTABLE_URI_PERMISSION_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+180;
     int GET_PERSISTED_URI_PERMISSIONS_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+181;
     int APP_NOT_RESPONDING_VIA_PROVIDER_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+182;
+    int CHECK_THREAD_PERMISSION_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+183;
 }

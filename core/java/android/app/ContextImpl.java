@@ -1664,6 +1664,20 @@ class ContextImpl extends Context {
     }
 
     @Override
+    public int checkThreadPermission(String permission, int uid, int pid, int tid) {
+        if (permission == null) {
+            throw new IllegalArgumentException("permission is null");
+        }
+
+        try {
+            return ActivityManagerNative.getDefault().checkThreadPermission(
+                    permission, uid, pid, tid);
+        } catch (RemoteException e) {
+            return PackageManager.PERMISSION_DENIED;
+        }
+    }
+
+    @Override
     public int checkCallingPermission(String permission) {
         if (permission == null) {
             throw new IllegalArgumentException("permission is null");

@@ -412,6 +412,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
         final Context context = getContext();
         final int pid = Binder.getCallingPid();
         final int uid = Binder.getCallingUid();
+        final int tid = Binder.getCallingThreadId();
         String missingPerm = null;
 
         if (UserHandle.isSameApp(uid, mMyUid)) {
@@ -421,7 +422,8 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
         if (mExported) {
             final String componentPerm = getReadPermission();
             if (componentPerm != null) {
-                if (context.checkPermission(componentPerm, pid, uid) == PERMISSION_GRANTED) {
+                if (context.checkThreadPermission(componentPerm, uid, pid, tid)
+                        == PERMISSION_GRANTED) {
                     return;
                 } else {
                     missingPerm = componentPerm;
@@ -438,7 +440,8 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
                 for (PathPermission pp : pps) {
                     final String pathPerm = pp.getReadPermission();
                     if (pathPerm != null && pp.match(path)) {
-                        if (context.checkPermission(pathPerm, pid, uid) == PERMISSION_GRANTED) {
+                        if (context.checkThreadPermission(pathPerm, uid, pid, tid)
+                                == PERMISSION_GRANTED) {
                             return;
                         } else {
                             // any denied <path-permission> means we lose
@@ -474,6 +477,7 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
         final Context context = getContext();
         final int pid = Binder.getCallingPid();
         final int uid = Binder.getCallingUid();
+        final int tid = Binder.getCallingThreadId();
         String missingPerm = null;
 
         if (UserHandle.isSameApp(uid, mMyUid)) {
@@ -483,7 +487,8 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
         if (mExported) {
             final String componentPerm = getWritePermission();
             if (componentPerm != null) {
-                if (context.checkPermission(componentPerm, pid, uid) == PERMISSION_GRANTED) {
+                if (context.checkThreadPermission(componentPerm, uid, pid, tid)
+                        == PERMISSION_GRANTED) {
                     return;
                 } else {
                     missingPerm = componentPerm;
@@ -500,7 +505,8 @@ public abstract class ContentProvider implements ComponentCallbacks2 {
                 for (PathPermission pp : pps) {
                     final String pathPerm = pp.getWritePermission();
                     if (pathPerm != null && pp.match(path)) {
-                        if (context.checkPermission(pathPerm, pid, uid) == PERMISSION_GRANTED) {
+                        if (context.checkThreadPermission(pathPerm, uid, pid, tid)
+                                == PERMISSION_GRANTED) {
                             return;
                         } else {
                             // any denied <path-permission> means we lose

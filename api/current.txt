@@ -5870,6 +5870,7 @@ package android.content {
     method public abstract int checkCallingPermission(java.lang.String);
     method public abstract int checkCallingUriPermission(android.net.Uri, int);
     method public abstract int checkPermission(java.lang.String, int, int);
+    method public abstract int checkThreadPermission(java.lang.String, int, int, int);
     method public abstract int checkUriPermission(android.net.Uri, int, int, int);
     method public abstract int checkUriPermission(android.net.Uri, java.lang.String, java.lang.String, int, int, int);
     method public abstract deprecated void clearWallpaper() throws java.io.IOException;
@@ -6028,6 +6029,7 @@ package android.content {
     method public int checkCallingPermission(java.lang.String);
     method public int checkCallingUriPermission(android.net.Uri, int);
     method public int checkPermission(java.lang.String, int, int);
+    method public int checkThreadPermission(java.lang.String, int, int, int);
     method public int checkUriPermission(android.net.Uri, int, int, int);
     method public int checkUriPermission(android.net.Uri, java.lang.String, java.lang.String, int, int, int);
     method public void clearWallpaper() throws java.io.IOException;
@@ -23913,6 +23915,7 @@ package android.test.mock {
     method public int checkCallingPermission(java.lang.String);
     method public int checkCallingUriPermission(android.net.Uri, int);
     method public int checkPermission(java.lang.String, int, int);
+    method public int checkThreadPermission(java.lang.String, int, int, int);
     method public int checkUriPermission(android.net.Uri, int, int, int);
     method public int checkUriPermission(android.net.Uri, java.lang.String, java.lang.String, int, int, int);
     method public void clearWallpaper();

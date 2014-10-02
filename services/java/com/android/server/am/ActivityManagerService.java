@@ -5753,6 +5753,15 @@ public final class ActivityManagerService extends ActivityManagerNative
         return checkComponentPermission(permission, pid, UserHandle.getAppId(uid), -1, true);
     }
 
+    @Override
+    public int checkThreadPermission(String permission, int uid, int pid, int tid) {
+        if (permission == null) {
+            return PackageManager.PERMISSION_DENIED;
+        }
+        return checkComponentPermission(permission, pid, UserHandle.getAppId(uid),
+                tid, -1, true);
+    }
+
     /**
      * Binder IPC calls go through the public entry point.
      * This can be called with or without the global lock held.

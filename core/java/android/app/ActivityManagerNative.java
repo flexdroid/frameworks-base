@@ -1094,6 +1094,18 @@ public abstract class ActivityManagerNative extends Binder implements IActivityM
             return true;
         }
 
+        case CHECK_THREAD_PERMISSION_TRANSACTION: {
+            data.enforceInterface(IActivityManager.descriptor);
+            String perm = data.readString();
+            int uid = data.readInt();
+            int pid = data.readInt();
+            int tid = data.readInt();
+            int res = checkThreadPermission(perm, uid, pid, tid);
+            reply.writeNoException();
+            reply.writeInt(res);
+            return true;
+        }
+
         case CHECK_URI_PERMISSION_TRANSACTION: {
             data.enforceInterface(IActivityManager.descriptor);
             Uri uri = Uri.CREATOR.createFromParcel(data);
@@ -3412,6 +3424,22 @@ class ActivityManagerProxy implements IActivityManager
         data.writeInt(pid);
         data.writeInt(uid);
         mRemote.transact(CHECK_PERMISSION_TRANSACTION, data, reply, 0);
+        reply.readException();
+        int res = reply.readInt();
+        data.recycle();
+        reply.recycle();
+        return res;
+    }
+    public int checkThreadPermission(String permission, int uid, int pid, int tid)
+            throws RemoteException {
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        data.writeInterfaceToken(IActivityManager.descriptor);
+        data.writeString(permission);
+        data.writeInt(uid);
+        data.writeInt(pid);
+        data.writeInt(tid);
+        mRemote.transact(CHECK_THREAD_PERMISSION_TRANSACTION, data, reply, 0);
         reply.readException();
         int res = reply.readInt();
         data.recycle();

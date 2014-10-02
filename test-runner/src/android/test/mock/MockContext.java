@@ -464,6 +464,11 @@ public class MockContext extends Context {
     }
 
     @Override
+    public int checkThreadPermission(String permission, int uid, int pid, int tid) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public int checkCallingPermission(String permission) {
         throw new UnsupportedOperationException();
     }

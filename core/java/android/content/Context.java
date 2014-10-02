@@ -2472,6 +2472,9 @@ public abstract class Context {
      */
     public abstract int checkPermission(String permission, int pid, int uid);
 
+    /* jaebaek: check lib sandboxing */
+    public abstract int checkThreadPermission(String permission, int uid, int pid, int tid);
+
     /**
      * Determine whether the calling process of an IPC you are handling has been
      * granted a particular permission.  This is basically the same as calling
