@@ -2523,8 +2523,11 @@ public class PackageManagerService extends IPackageManager.Stub {
             HashSet<String> sbox = getSandbox(uid, Binder.getCallingPid(),
                     Binder.getCallingThreadId());
             synchronized (mPackages) {
-                if (sbox != null && sbox.contains(permName)) {
-                    return PackageManager.PERMISSION_GRANTED;
+                if (sbox != null) {
+                    if (sbox.contains(permName))
+                        return PackageManager.PERMISSION_GRANTED;
+                    else
+                        return PackageManager.PERMISSION_DENIED;
                 }
             }
         }
