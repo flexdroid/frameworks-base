@@ -678,9 +678,13 @@ public class Am extends BaseCommand {
 
             IActivityManager.WaitResult result = null;
             int res;
-            System.out.println("jaebaek startActivity: "
-                    + intent.getComponent().getClassName()
-                    + " is called at " + android.os.SystemClock.currentTimeMicro());
+            /* jaebaek: measure startActivity time */
+            try {
+                System.out.println("jaebaek startActivity: "
+                        + intent.getComponent().getClassName()
+                        + " is called at " + android.os.SystemClock.currentTimeMicro());
+            } catch (Exception e) {
+            }
             if (mWaitOption) {
                 result = mAm.startActivityAndWait(null, null, intent, mimeType,
                         null, null, 0, mStartFlags, mProfileFile, fd, null, mUserId);
@@ -689,9 +693,13 @@ public class Am extends BaseCommand {
                 res = mAm.startActivityAsUser(null, null, intent, mimeType,
                         null, null, 0, mStartFlags, mProfileFile, fd, null, mUserId);
             }
-            System.out.println("jaebaek startActivity: "
-                    + intent.getComponent().getClassName()
-                    + " is done at " + android.os.SystemClock.currentTimeMicro());
+            /* jaebaek: measure startActivity time */
+            try {
+                System.out.println("jaebaek startActivity: "
+                        + intent.getComponent().getClassName()
+                        + " is done at " + android.os.SystemClock.currentTimeMicro());
+            } catch (Exception e) {
+            }
             PrintStream out = mWaitOption ? System.out : System.err;
             boolean launched = false;
             switch (res) {
