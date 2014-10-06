@@ -1137,7 +1137,8 @@ public final class ActivityManagerService extends ActivityManagerNative
                     }
                     broadcastIntentLocked(null, null, intent,
                             null, null, 0, null, null, null, AppOpsManager.OP_NONE,
-                            false, false, MY_PID, Process.SYSTEM_UID, 0 /* TODO: Verify */);
+                            false, false, MY_PID, Process.SYSTEM_UID, 0,
+                            Process.myTid()/* TODO: Verify */);
 
                     if (mShowDialogs) {
                         Dialog d = new AppNotRespondingDialog(ActivityManagerService.this,
@@ -4406,7 +4407,7 @@ public final class ActivityManagerService extends ActivityManagerNative
 
         broadcastIntentLocked(null, null, intent, null,
                 null, 0, null, null, null, AppOpsManager.OP_NONE, false, false, -1,
-                Process.SYSTEM_UID, UserHandle.USER_ALL);
+                Process.SYSTEM_UID, UserHandle.USER_ALL, Process.myTid());
     }
 
     @Override
@@ -4506,7 +4507,7 @@ public final class ActivityManagerService extends ActivityManagerNative
         broadcastIntentLocked(null, null, intent,
                 null, null, 0, null, null, null, AppOpsManager.OP_NONE,
                 false, false,
-                MY_PID, Process.SYSTEM_UID, UserHandle.getUserId(uid));
+                MY_PID, Process.SYSTEM_UID, UserHandle.getUserId(uid), Process.myTid());
     }
 
     private void forceStopUserLocked(int userId, String reason) {
@@ -4518,7 +4519,7 @@ public final class ActivityManagerService extends ActivityManagerNative
         broadcastIntentLocked(null, null, intent,
                 null, null, 0, null, null, null, AppOpsManager.OP_NONE,
                 false, false,
-                MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL);
+                MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL, Process.myTid());
     }
 
     private final boolean killPackageProcessesLocked(String packageName, int appId,
@@ -5187,7 +5188,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                                 0, null, null,
                                 android.Manifest.permission.RECEIVE_BOOT_COMPLETED,
                                 AppOpsManager.OP_NONE, true, false, MY_PID, Process.SYSTEM_UID,
-                                userId);
+                                userId, Process.myTid());
                     }
                 }
             }
@@ -9302,7 +9303,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                             broadcastIntentLocked(null, null, intent, null, finisher,
                                     0, null, null, null, AppOpsManager.OP_NONE,
                                     true, false, MY_PID, Process.SYSTEM_UID,
-                                    users[j]);
+                                    users[j], Process.myTid());
                             if (finisher != null) {
                                 mWaitingUpdate = true;
                             }
@@ -9440,7 +9441,8 @@ public final class ActivityManagerService extends ActivityManagerNative
                 intent.putExtra(Intent.EXTRA_USER_HANDLE, mCurrentUserId);
                 broadcastIntentLocked(null, null, intent,
                         null, null, 0, null, null, null, AppOpsManager.OP_NONE,
-                        false, false, MY_PID, Process.SYSTEM_UID, mCurrentUserId);
+                        false, false, MY_PID, Process.SYSTEM_UID, mCurrentUserId,
+                        Process.myTid());
                 intent = new Intent(Intent.ACTION_USER_STARTING);
                 intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY);
                 intent.putExtra(Intent.EXTRA_USER_HANDLE, mCurrentUserId);
@@ -9453,7 +9455,8 @@ public final class ActivityManagerService extends ActivityManagerNative
                             }
                         }, 0, null, null,
                         android.Manifest.permission.INTERACT_ACROSS_USERS, AppOpsManager.OP_NONE,
-                        true, false, MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL);
+                        true, false, MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL,
+                        Process.myTid());
             } finally {
                 Binder.restoreCallingIdentity(ident);
             }
@@ -13151,7 +13154,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                     BroadcastQueue queue = broadcastQueueForIntent(intent);
                     BroadcastRecord r = new BroadcastRecord(queue, intent, null,
                             null, -1, -1, null, null, AppOpsManager.OP_NONE, receivers, null, 0,
-                            null, null, false, true, true, -1);
+                            null, null, false, true, true, -1, -1);
                     queue.enqueueParallelBroadcastLocked(r);
                     queue.scheduleBroadcastsLocked();
                 }
@@ -13301,7 +13304,7 @@ public final class ActivityManagerService extends ActivityManagerNative
             IIntentReceiver resultTo, int resultCode, String resultData,
             Bundle map, String requiredPermission, int appOp,
             boolean ordered, boolean sticky, int callingPid, int callingUid,
-            int userId) {
+            int userId, int callingTid) {
         intent = new Intent(intent);
 
         // By default broadcasts do not go to stopped apps.
@@ -13587,7 +13590,7 @@ public final class ActivityManagerService extends ActivityManagerNative
             BroadcastRecord r = new BroadcastRecord(queue, intent, callerApp,
                     callerPackage, callingPid, callingUid, resolvedType, requiredPermission,
                     appOp, registeredReceivers, resultTo, resultCode, resultData, map,
-                    ordered, sticky, false, userId);
+                    ordered, sticky, false, userId, callingTid);
             if (DEBUG_BROADCAST) Slog.v(
                     TAG, "Enqueueing parallel broadcast " + r);
             final boolean replaced = replacePending && queue.replaceParallelBroadcastLocked(r);
@@ -13677,7 +13680,7 @@ public final class ActivityManagerService extends ActivityManagerNative
             BroadcastRecord r = new BroadcastRecord(queue, intent, callerApp,
                     callerPackage, callingPid, callingUid, resolvedType,
                     requiredPermission, appOp, receivers, resultTo, resultCode,
-                    resultData, map, ordered, sticky, false, userId);
+                    resultData, map, ordered, sticky, false, userId, callingTid);
             if (DEBUG_BROADCAST) Slog.v(
                     TAG, "Enqueueing ordered broadcast " + r
                     + ": prev had " + queue.mOrderedBroadcasts.size());
@@ -13735,12 +13738,13 @@ public final class ActivityManagerService extends ActivityManagerNative
             final ProcessRecord callerApp = getRecordForAppLocked(caller);
             final int callingPid = Binder.getCallingPid();
             final int callingUid = Binder.getCallingUid();
+            final int callingTid = Binder.getCallingThreadId();
             final long origId = Binder.clearCallingIdentity();
             int res = broadcastIntentLocked(callerApp,
                     callerApp != null ? callerApp.info.packageName : null,
                     intent, resolvedType, resultTo,
                     resultCode, resultData, map, requiredPermission, appOp, serialized, sticky,
-                    callingPid, callingUid, userId);
+                    callingPid, callingUid, userId, callingTid);
             Binder.restoreCallingIdentity(origId);
             return res;
         }
@@ -13756,7 +13760,7 @@ public final class ActivityManagerService extends ActivityManagerNative
             final long origId = Binder.clearCallingIdentity();
             int res = broadcastIntentLocked(null, packageName, intent, resolvedType,
                     resultTo, resultCode, resultData, map, requiredPermission,
-                    AppOpsManager.OP_NONE, serialized, sticky, -1, uid, userId);
+                    AppOpsManager.OP_NONE, serialized, sticky, -1, uid, userId, -1);
             Binder.restoreCallingIdentity(origId);
             return res;
         }
@@ -14154,13 +14158,14 @@ public final class ActivityManagerService extends ActivityManagerNative
                         | Intent.FLAG_RECEIVER_FOREGROUND);
                 broadcastIntentLocked(null, null, intent, null, null, 0, null, null,
                         null, AppOpsManager.OP_NONE, false, false, MY_PID,
-                        Process.SYSTEM_UID, UserHandle.USER_ALL);
+                        Process.SYSTEM_UID, UserHandle.USER_ALL, Process.myTid());
                 if ((changes&ActivityInfo.CONFIG_LOCALE) != 0) {
                     intent = new Intent(Intent.ACTION_LOCALE_CHANGED);
                     intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
                     broadcastIntentLocked(null, null, intent,
                             null, null, 0, null, null, null, AppOpsManager.OP_NONE,
-                            false, false, MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL);
+                            false, false, MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL,
+                            Process.myTid());
                 }
             }
         }
@@ -16145,7 +16150,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                     intent.putExtra(Intent.EXTRA_USER_HANDLE, userId);
                     broadcastIntentLocked(null, null, intent,
                             null, null, 0, null, null, null, AppOpsManager.OP_NONE,
-                            false, false, MY_PID, Process.SYSTEM_UID, userId);
+                            false, false, MY_PID, Process.SYSTEM_UID, userId, Process.myTid());
                 }
 
                 if ((userInfo.flags&UserInfo.FLAG_INITIALIZED) == 0) {
@@ -16161,7 +16166,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                                     }
                                 }, 0, null, null, null, AppOpsManager.OP_NONE,
                                 true, false, MY_PID, Process.SYSTEM_UID,
-                                userId);
+                                userId, Process.myTid());
                         uss.initializing = true;
                     } else {
                         getUserManagerLocked().makeInitialized(userInfo.id);
@@ -16191,7 +16196,8 @@ public final class ActivityManagerService extends ActivityManagerNative
                                 }
                             }, 0, null, null,
                             android.Manifest.permission.INTERACT_ACROSS_USERS, AppOpsManager.OP_NONE,
-                            true, false, MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL);
+                            true, false, MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL,
+                            Process.myTid());
                 }
             }
         } finally {
@@ -16212,7 +16218,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                 intent.putExtra(Intent.EXTRA_USER_HANDLE, oldUserId);
                 broadcastIntentLocked(null, null, intent,
                         null, null, 0, null, null, null, AppOpsManager.OP_NONE,
-                        false, false, MY_PID, Process.SYSTEM_UID, oldUserId);
+                        false, false, MY_PID, Process.SYSTEM_UID, oldUserId, Process.myTid());
             }
             if (newUserId >= 0) {
                 intent = new Intent(Intent.ACTION_USER_FOREGROUND);
@@ -16221,7 +16227,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                 intent.putExtra(Intent.EXTRA_USER_HANDLE, newUserId);
                 broadcastIntentLocked(null, null, intent,
                         null, null, 0, null, null, null, AppOpsManager.OP_NONE,
-                        false, false, MY_PID, Process.SYSTEM_UID, newUserId);
+                        false, false, MY_PID, Process.SYSTEM_UID, newUserId, Process.myTid());
                 intent = new Intent(Intent.ACTION_USER_SWITCHED);
                 intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY
                         | Intent.FLAG_RECEIVER_FOREGROUND);
@@ -16229,7 +16235,8 @@ public final class ActivityManagerService extends ActivityManagerNative
                 broadcastIntentLocked(null, null, intent,
                         null, null, 0, null, null,
                         android.Manifest.permission.MANAGE_USERS, AppOpsManager.OP_NONE,
-                        false, false, MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL);
+                        false, false, MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL,
+                        Process.myTid());
             }
         } finally {
             Binder.restoreCallingIdentity(ident);
@@ -16335,7 +16342,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                 broadcastIntentLocked(null, null, intent,
                         null, null, 0, null, null,
                         android.Manifest.permission.RECEIVE_BOOT_COMPLETED, AppOpsManager.OP_NONE,
-                        true, false, MY_PID, Process.SYSTEM_UID, userId);
+                        true, false, MY_PID, Process.SYSTEM_UID, userId, Process.myTid());
             }
             int num = mUserLru.size();
             int i = 0;
@@ -16452,14 +16459,14 @@ public final class ActivityManagerService extends ActivityManagerNative
                         }
                         broadcastIntentLocked(null, null, shutdownIntent,
                                 null, shutdownReceiver, 0, null, null, null, AppOpsManager.OP_NONE,
-                                true, false, MY_PID, Process.SYSTEM_UID, userId);
+                                true, false, MY_PID, Process.SYSTEM_UID, userId, Process.myTid());
                     }
                 };
                 // Kick things off.
                 broadcastIntentLocked(null, null, stoppingIntent,
                         null, stoppingReceiver, 0, null, null,
                         android.Manifest.permission.INTERACT_ACROSS_USERS, AppOpsManager.OP_NONE,
-                        true, false, MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL);
+                        true, false, MY_PID, Process.SYSTEM_UID, UserHandle.USER_ALL, Process.myTid());
             } finally {
                 Binder.restoreCallingIdentity(ident);
             }

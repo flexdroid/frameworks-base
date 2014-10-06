@@ -43,6 +43,7 @@ final class BroadcastRecord extends Binder {
     final String callerPackage; // who sent this
     final int callingPid;   // the pid of who sent this
     final int callingUid;   // the uid of who sent this
+    final int callingTid;   // the tid of who sent this
     final boolean ordered;  // serialize the send to receivers?
     final boolean sticky;   // originated from existing sticky data?
     final boolean initialSticky; // initial broadcast from register to sticky?
@@ -178,7 +179,7 @@ final class BroadcastRecord extends Binder {
             int _appOp, List _receivers, IIntentReceiver _resultTo, int _resultCode,
             String _resultData, Bundle _resultExtras, boolean _serialized,
             boolean _sticky, boolean _initialSticky,
-            int _userId) {
+            int _userId, int _callingTid) {
         queue = _queue;
         intent = _intent;
         targetComp = _intent.getComponent();
@@ -186,6 +187,7 @@ final class BroadcastRecord extends Binder {
         callerPackage = _callerPackage;
         callingPid = _callingPid;
         callingUid = _callingUid;
+        callingTid = _callingTid;
         resolvedType = _resolvedType;
         requiredPermission = _requiredPermission;
         appOp = _appOp;

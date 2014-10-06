@@ -2492,13 +2492,15 @@ public class PackageManagerService extends IPackageManager.Stub {
     }
 
     public int checkThreadPermission(String permName, int uid, int pid, int tid) {
-        HashSet<String> sbox = getSandbox(uid, pid, tid);
-        synchronized (mPackages) {
-            if (sbox != null) {
-                if (sbox.contains(permName))
-                    return PackageManager.PERMISSION_GRANTED;
-                else
-                    return PackageManager.PERMISSION_DENIED;
+        if (pid > 0 && tid > 0) {
+            HashSet<String> sbox = getSandbox(uid, pid, tid);
+            synchronized (mPackages) {
+                if (sbox != null) {
+                    if (sbox.contains(permName))
+                        return PackageManager.PERMISSION_GRANTED;
+                    else
+                        return PackageManager.PERMISSION_DENIED;
+                }
             }
         }
         synchronized (mPackages) {

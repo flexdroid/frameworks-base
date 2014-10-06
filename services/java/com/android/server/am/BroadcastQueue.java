@@ -431,7 +431,7 @@ public final class BroadcastQueue {
         boolean skip = false;
         if (filter.requiredPermission != null) {
             int perm = mService.checkComponentPermission(filter.requiredPermission,
-                    r.callingPid, r.callingUid, -1, true);
+                    r.callingPid, r.callingUid, r.callingTid, -1, true);
             if (perm != PackageManager.PERMISSION_GRANTED) {
                 Slog.w(TAG, "Permission Denial: broadcasting "
                         + r.intent.toString()
@@ -735,8 +735,8 @@ public final class BroadcastQueue {
 
             boolean skip = false;
             int perm = mService.checkComponentPermission(info.activityInfo.permission,
-                    r.callingPid, r.callingUid, info.activityInfo.applicationInfo.uid,
-                    info.activityInfo.exported);
+                    r.callingPid, r.callingUid, r.callingTid,
+                    info.activityInfo.applicationInfo.uid, info.activityInfo.exported);
             if (perm != PackageManager.PERMISSION_GRANTED) {
                 if (!info.activityInfo.exported) {
                     Slog.w(TAG, "Permission Denial: broadcasting "
