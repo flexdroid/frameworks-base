@@ -797,7 +797,8 @@ public final class ActiveServices {
 
         ServiceLookupResult res =
             retrieveServiceLocked(service, resolvedType,
-                    Binder.getCallingPid(), Binder.getCallingUid(), userId, true, callerFg);
+                    Binder.getCallingUid(), Binder.getCallingPid(),
+                    Binder.getCallingThreadId(), userId, true, callerFg);
         if (res == null) {
             return 0;
         }
