@@ -679,12 +679,7 @@ public class Am extends BaseCommand {
             IActivityManager.WaitResult result = null;
             int res;
             /* jaebaek: measure startActivity time */
-            try {
-                System.out.println("jaebaek startActivity: "
-                        + intent.getComponent().getClassName()
-                        + " is called at " + android.os.SystemClock.currentTimeMicro());
-            } catch (Exception e) {
-            }
+            long timeDelay = android.os.SystemClock.currentTimeMicro();
             if (mWaitOption) {
                 result = mAm.startActivityAndWait(null, null, intent, mimeType,
                         null, null, 0, mStartFlags, mProfileFile, fd, null, mUserId);
@@ -695,9 +690,10 @@ public class Am extends BaseCommand {
             }
             /* jaebaek: measure startActivity time */
             try {
+                timeDelay = android.os.SystemClock.currentTimeMicro() - timeDelay;
                 System.out.println("jaebaek startActivity: "
                         + intent.getComponent().getClassName()
-                        + " is done at " + android.os.SystemClock.currentTimeMicro());
+                        + " takes " + timeDelay);
             } catch (Exception e) {
             }
             PrintStream out = mWaitOption ? System.out : System.err;
