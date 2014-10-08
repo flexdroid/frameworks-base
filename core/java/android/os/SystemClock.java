@@ -177,8 +177,6 @@ public final class SystemClock {
      * Returns current wall time in  microseconds.
      * 
      * @return elapsed microseconds in wall time
-     * 
-     * @hide
      */
     public static native long currentTimeMicro();
 }
