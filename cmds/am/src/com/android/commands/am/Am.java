@@ -581,7 +581,13 @@ public class Am extends BaseCommand {
             return;
         }
         System.out.println("Starting service: " + intent);
+        System.out.println("jaebaek startService: "
+                + intent.getComponent().getClassName()
+                + " is called at " + android.os.SystemClock.currentTimeMicro());
         ComponentName cn = mAm.startService(null, intent, intent.getType(), mUserId);
+        System.out.println("jaebaek startService: "
+                + intent.getComponent().getClassName()
+                + " is done at " + android.os.SystemClock.currentTimeMicro());
         if (cn == null) {
             System.err.println("Error: Not found; no service started.");
         } else if (cn.getPackageName().equals("!")) {
@@ -672,13 +678,23 @@ public class Am extends BaseCommand {
 
             IActivityManager.WaitResult result = null;
             int res;
+            /* jaebaek: measure startActivity time */
+            long timeDelay = android.os.SystemClock.currentTimeMicro();
             if (mWaitOption) {
                 result = mAm.startActivityAndWait(null, null, intent, mimeType,
-                            null, null, 0, mStartFlags, mProfileFile, fd, null, mUserId);
+                        null, null, 0, mStartFlags, mProfileFile, fd, null, mUserId);
                 res = result.result;
             } else {
                 res = mAm.startActivityAsUser(null, null, intent, mimeType,
                         null, null, 0, mStartFlags, mProfileFile, fd, null, mUserId);
+            }
+            /* jaebaek: measure startActivity time */
+            try {
+                timeDelay = android.os.SystemClock.currentTimeMicro() - timeDelay;
+                System.out.println("jaebaek startActivity: "
+                        + intent.getComponent().getClassName()
+                        + " takes " + timeDelay);
+            } catch (Exception e) {
             }
             PrintStream out = mWaitOption ? System.out : System.err;
             boolean launched = false;
