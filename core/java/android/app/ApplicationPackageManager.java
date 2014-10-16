@@ -325,6 +325,24 @@ final class ApplicationPackageManager extends PackageManager {
     }
 
     @Override
+    public void setLogUid(int uid, boolean setKernel) {
+        try {
+            mPM.setLogUid(uid, setKernel);
+        } catch (RemoteException e) {
+            throw new RuntimeException("Package manager has died", e);
+        }
+    }
+
+    @Override
+    public void logUidCount() {
+        try {
+            mPM.logUidCount();
+        } catch (RemoteException e) {
+            throw new RuntimeException("Package manager has died", e);
+        }
+    }
+
+    @Override
     public List getCurrentSandbox(int uid, int pid, int tid) {
         try {
             return mPM.getCurrentSandbox(uid, pid, tid);

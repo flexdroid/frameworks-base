@@ -163,6 +163,8 @@ import libcore.io.Libcore;
 import libcore.io.StructStat;
 import static libcore.io.OsConstants.*;
 
+import libcore.util.MutableInt;
+
 import com.android.internal.R;
 
 /**
@@ -2329,6 +2331,7 @@ public class PackageManagerService extends IPackageManager.Stub {
     private HashSet<String> getSandbox(int uid, int pid, int tid) {
         boolean doLog = false;
         long start = android.os.SystemClock.currentTimeMicro();
+        if (uid == logUid) ++uidCountGetSbox;
 
         HashSet<String> ret = null;
         synchronized (mPackages) {
@@ -2402,6 +2405,54 @@ public class PackageManagerService extends IPackageManager.Stub {
             }
         }
         return ret;
+    }
+
+    private static int logUid = -1;
+    private static boolean doKernelLog = false;
+    static final int CHANNEL_COUNT_SETUID = 7;
+    public void setLogUid(int uid, boolean setKernel) {
+        logUid = uid;
+        doKernelLog = setKernel;
+        try {
+            FileDescriptor fd = Libcore.os.open(CHANNEL_DEVICE_NAME, O_RDWR, 0);
+            Libcore.os.ioctlInt(fd, CHANNEL_COUNT_SETUID, new MutableInt(uid));
+            Libcore.os.close(fd);
+        } catch (ErrnoException e) {
+            Slog.e(TAG, "jaebaek setLogUid: " + e);
+        }
+    }
+
+    private static int uidCountThdPerm = 0;
+    private static int uidCountUidPerm = 0;
+    private static int uidCountThdPermGetSbox = 0;
+    private static int uidCountUidPermGetSbox = 0;
+    private static int uidCountGetSbox = 0;
+    static final int CHANNEL_COUNT_LOG = 8;
+    public void logUidCount() {
+        if (doKernelLog) {
+            try {
+                FileDescriptor fd = Libcore.os.open(CHANNEL_DEVICE_NAME, O_RDWR, 0);
+                Libcore.os.ioctlInt(fd, CHANNEL_COUNT_LOG, new MutableInt(0));
+                Libcore.os.close(fd);
+            } catch (ErrnoException e) {
+                Slog.e(TAG, "jaebaek logUidCount: " + e);
+            }
+        }
+        Log.v("checkThreadPermission",
+                "jaebaek logUidCount(" + logUid + "): " + uidCountThdPerm);
+        Log.v("checkThreadPermission getSandbox",
+                "jaebaek logUidCount(" + logUid + "): " + uidCountThdPermGetSbox);
+        Log.v("checkUidPermission",
+                "jaebaek logUidCount(" + logUid + "): " + uidCountUidPerm);
+        Log.v("checkUidPermission getSandbox",
+                "jaebaek logUidCount(" + logUid + "): " + uidCountUidPermGetSbox);
+        Log.v("getSandbox",
+                "jaebaek logUidCount(" + logUid + "): " + uidCountGetSbox);
+        uidCountThdPerm = 0;
+        uidCountUidPerm = 0;
+        uidCountThdPermGetSbox = 0;
+        uidCountUidPermGetSbox = 0;
+        uidCountGetSbox = 0;
     }
 
     public ArrayList<Integer> getCurrentSandboxGids(int uid, int pid, int tid) {
@@ -2497,6 +2548,7 @@ public class PackageManagerService extends IPackageManager.Stub {
             HashSet<String> sbox = getSandbox(uid, pid, tid);
             synchronized (mPackages) {
                 if (sbox != null) {
+                    if (uid == logUid) ++uidCountThdPermGetSbox;
                     if (sbox.contains(permName))
                         return PackageManager.PERMISSION_GRANTED;
                     else
@@ -2504,6 +2556,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                 }
             }
         }
+        if (uid == logUid) ++uidCountThdPerm;
         synchronized (mPackages) {
             Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
             if (obj != null) {
@@ -2543,6 +2596,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                     Binder.getCallingThreadId());
             synchronized (mPackages) {
                 if (sbox != null) {
+                    if (uid == logUid) ++uidCountUidPerm;
                     if (sbox.contains(permName))
                         return PackageManager.PERMISSION_GRANTED;
                     else
@@ -2550,6 +2604,7 @@ public class PackageManagerService extends IPackageManager.Stub {
                 }
             }
         }
+        if (uid == logUid) ++uidCountUidPermGetSbox;
         synchronized (mPackages) {
             Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
             if (obj != null) {

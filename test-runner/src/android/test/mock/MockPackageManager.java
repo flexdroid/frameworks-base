@@ -168,6 +168,16 @@ public class MockPackageManager extends PackageManager {
     }
 
     @Override
+    public void setLogUid(int uid, boolean setKernel) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void logUidCount() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public List getCurrentSandbox(int uid, int pid, int tid) {
         throw new UnsupportedOperationException();
     }
