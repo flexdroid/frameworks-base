@@ -81,9 +81,9 @@ interface IPackageManager {
 
     int checkPermission(String permName, String pkgName);
 
-    void logUidCount();
+    void logCount();
 
-    void setLogUid(int uid, boolean setKernel);
+    void setLogCount(int uid, int tid, boolean setKernel);
 
     List getCurrentSandbox(int uid, int pid, int tid);
 

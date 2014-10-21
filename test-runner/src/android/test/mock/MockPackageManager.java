@@ -168,12 +168,12 @@ public class MockPackageManager extends PackageManager {
     }
 
     @Override
-    public void setLogUid(int uid, boolean setKernel) {
+    public void setLogCount(int uid, int tid, boolean setKernel) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void logUidCount() {
+    public void logCount() {
         throw new UnsupportedOperationException();
     }
 

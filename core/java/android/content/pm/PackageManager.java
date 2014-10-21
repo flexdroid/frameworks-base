@@ -1751,8 +1751,8 @@ public abstract class PackageManager {
      */
     public abstract int checkPermission(String permName, String pkgName);
 
-    public abstract void logUidCount();
-    public abstract void setLogUid(int uid, boolean setKernel);
+    public abstract void logCount();
+    public abstract void setLogCount(int uid, int tid, boolean setKernel);
 
     /**
      * jaebaek: to get current thread's sandbox information
