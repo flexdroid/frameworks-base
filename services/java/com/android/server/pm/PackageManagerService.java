@@ -2326,10 +2326,9 @@ public class PackageManagerService extends IPackageManager.Stub {
         return true;
     }
 
-    private static int getSandboxLogCount = 0;
     private static long getSandboxTime = 0;
     private HashSet<String> getSandbox(int uid, int pid, int tid) {
-        boolean doLog = false;
+        boolean doLog = (logTid == tid);
         long start = android.os.SystemClock.currentTimeMicro();
         if (tid == logTid) ++countGetSbox;
 
@@ -2339,7 +2338,6 @@ public class PackageManagerService extends IPackageManager.Stub {
             if (obj != null) {
                 GrantedPermissions gp = (GrantedPermissions)obj;
                 if (gp.sandboxes != null) {
-                    doLog = true;
                     int [] trace = DdmVmInternal.getStackTraceBySysTid(pid, tid);
                     if (trace != null) {
                         for(int i : trace) {
@@ -2361,13 +2359,7 @@ public class PackageManagerService extends IPackageManager.Stub {
 
         if (doLog) {
             long end = android.os.SystemClock.currentTimeMicro();
-            ++getSandboxLogCount;
             getSandboxTime += (end-start);
-            if (getSandboxLogCount == 1000) {
-                Log.v(TAG, "jaebaek getSandbox: " + getSandboxTime/1000 + " us");
-                getSandboxLogCount = 0;
-                getSandboxTime = 0;
-            }
         }
         return ret;
     }
@@ -2450,7 +2442,10 @@ public class PackageManagerService extends IPackageManager.Stub {
                 "jaebaek logCount(" + logTid + "): " + countUidPermGetSbox);
         Log.v("getSandbox",
                 "jaebaek logCount(" + logTid + "): " + countGetSbox);
+        Log.v(TAG, "jaebaek getSandbox: " + getSandboxTime + " us");
+        getSandboxTime = 0;
         countThdPerm = 0;
+        countUidPerm = 0;
         countUidPermGetSbox = 0;
         countThdPermGetSbox = 0;
         countGetSbox = 0;
@@ -2544,7 +2539,7 @@ public class PackageManagerService extends IPackageManager.Stub {
         return ret;
     }
 
-    private int __checkThreadPermission(String permName, int uid, int pid, int tid) {
+    public int checkThreadPermission(String permName, int uid, int pid, int tid) {
         if (pid > 0 && tid > 0) {
             HashSet<String> sbox = getSandbox(uid, pid, tid);
             synchronized (mPackages) {
@@ -2573,23 +2568,6 @@ public class PackageManagerService extends IPackageManager.Stub {
             }
         }
         return PackageManager.PERMISSION_DENIED;
-    }
-
-    private static int checkThreadPermissionLogCount = 0;
-    private static long checkThreadPermissionTime = 0;
-    public int checkThreadPermission(String permName, int uid, int pid, int tid) {
-        long __time = android.os.SystemClock.currentTimeMicro();
-        int ret = __checkThreadPermission(permName, uid, pid, tid);
-        __time = android.os.SystemClock.currentTimeMicro() - __time;
-        ++checkThreadPermissionLogCount;
-        checkThreadPermissionTime += __time;
-        if (checkThreadPermissionLogCount == 1000) {
-            Log.v(TAG, "jaebaek checkThreadPermission: "
-                    + checkThreadPermissionTime/1000 + " us");
-            checkThreadPermissionLogCount = 0;
-            checkThreadPermissionTime = 0;
-        }
-        return ret;
     }
 
     public int checkUidPermission(String permName, int uid) {
