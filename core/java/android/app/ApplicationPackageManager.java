@@ -324,6 +324,24 @@ final class ApplicationPackageManager extends PackageManager {
     }
 
     @Override
+    public void setLogCount(int uid, int tid, boolean setKernel) {
+        try {
+            mPM.setLogCount(uid, tid, setKernel);
+        } catch (RemoteException e) {
+            throw new RuntimeException("Package manager has died", e);
+        }
+    }
+
+    @Override
+    public void logCount() {
+        try {
+            mPM.logCount();
+        } catch (RemoteException e) {
+            throw new RuntimeException("Package manager has died", e);
+        }
+    }
+
+    @Override
     public boolean addPermission(PermissionInfo info) {
         try {
             return mPM.addPermission(info);

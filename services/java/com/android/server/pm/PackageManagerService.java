@@ -2198,7 +2198,20 @@ public class PackageManagerService extends IPackageManager.Stub {
         return PackageManager.PERMISSION_DENIED;
     }
 
+    public void logCount() {
+        Log.v(TAG, "jaebaek countUidPermission: " + countUidPermission);
+        countUidPermission = 0;
+    }
+
+    private int countUid = -1;
+    private int countUidPermission = -1;
+    public void setLogCount(int uid, int tid, boolean setKernel) {
+        countUid = uid;
+        countUidPermission = 0;
+    }
+
     public int checkUidPermission(String permName, int uid) {
+        if (countUid == uid) ++countUidPermission;
         synchronized (mPackages) {
             Object obj = mSettings.getUserIdLPr(UserHandle.getAppId(uid));
             if (obj != null) {

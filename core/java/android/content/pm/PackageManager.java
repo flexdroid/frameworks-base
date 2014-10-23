@@ -1750,6 +1750,9 @@ public abstract class PackageManager {
      */
     public abstract int checkPermission(String permName, String pkgName);
 
+    public abstract void logCount();
+    public abstract void setLogCount(int uid, int tid, boolean setKernel);
+
     /**
      * Add a new dynamic permission to the system.  For this to work, your
      * package must have defined a permission tree through the

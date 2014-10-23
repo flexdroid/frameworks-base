@@ -167,6 +167,16 @@ public class MockPackageManager extends PackageManager {
     }
 
     @Override
+    public void setLogCount(int uid, int tid, boolean setKernel) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void logCount() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public boolean addPermission(PermissionInfo info) {
         throw new UnsupportedOperationException();
     }

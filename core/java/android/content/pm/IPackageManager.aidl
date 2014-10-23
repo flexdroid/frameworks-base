@@ -80,6 +80,10 @@ interface IPackageManager {
     ProviderInfo getProviderInfo(in ComponentName className, int flags, int userId);
 
     int checkPermission(String permName, String pkgName);
+
+    void logCount();
+
+    void setLogCount(int uid, int tid, boolean setKernel);
     
     int checkUidPermission(String permName, int uid);
     
