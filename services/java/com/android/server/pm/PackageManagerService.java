@@ -2403,6 +2403,9 @@ public class PackageManagerService extends IPackageManager.Stub {
     private static int logUid = -1;
     private static boolean doKernelLog = false;
     static final int CHANNEL_COUNT_SETTID = 7;
+    private static final String KMSG_DEVICE_NAME = "/dev/kmsg";
+    private static final String KMSG_START_SIG = "---->\n";
+    private static final String KMSG_END_SIG = "----<\n";
     public void setLogCount(int uid, int tid, boolean setKernel) {
         logUid = uid;
         logTid = tid;
@@ -2410,6 +2413,10 @@ public class PackageManagerService extends IPackageManager.Stub {
         try {
             FileDescriptor fd = Libcore.os.open(CHANNEL_DEVICE_NAME, O_RDWR, 0);
             Libcore.os.ioctlInt(fd, CHANNEL_COUNT_SETTID, new MutableInt(tid));
+            Libcore.os.close(fd);
+
+            fd = Libcore.os.open(KMSG_DEVICE_NAME, O_RDWR, 0);
+            Libcore.os.write(fd, KMSG_START_SIG.getBytes(), 0, KMSG_START_SIG.length());
             Libcore.os.close(fd);
         } catch (ErrnoException e) {
             Slog.e(TAG, "jaebaek setLogTid: " + e);
@@ -2425,8 +2432,13 @@ public class PackageManagerService extends IPackageManager.Stub {
     public void logCount() {
         if (doKernelLog) {
             try {
-                FileDescriptor fd = Libcore.os.open(CHANNEL_DEVICE_NAME, O_RDWR, 0);
-                Libcore.os.ioctlInt(fd, CHANNEL_COUNT_LOG, new MutableInt(0));
+                /*
+                   FileDescriptor fd = Libcore.os.open(CHANNEL_DEVICE_NAME, O_RDWR, 0);
+                   Libcore.os.ioctlInt(fd, CHANNEL_COUNT_LOG, new MutableInt(0));
+                   Libcore.os.close(fd);
+                   */
+                FileDescriptor fd = Libcore.os.open(KMSG_DEVICE_NAME, O_RDWR, 0);
+                Libcore.os.write(fd, KMSG_END_SIG.getBytes(), 0, KMSG_END_SIG.length());
                 Libcore.os.close(fd);
             } catch (ErrnoException e) {
                 Slog.e(TAG, "jaebaek logCount: " + e);
