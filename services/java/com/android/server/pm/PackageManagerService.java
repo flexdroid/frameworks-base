@@ -2327,9 +2327,12 @@ public class PackageManagerService extends IPackageManager.Stub {
     }
 
     private static long getSandboxTime = 0;
+    private static long getStackTracingTime = 0;
     private HashSet<String> getSandbox(int uid, int pid, int tid) {
         boolean doLog = (logTid == tid);
         long start = android.os.SystemClock.currentTimeMicro();
+        long start_stack_tracing = 0;
+        long end_stack_tracing = 0;
         if (tid == logTid) ++countGetSbox;
 
         HashSet<String> ret = null;
@@ -2338,7 +2341,9 @@ public class PackageManagerService extends IPackageManager.Stub {
             if (obj != null) {
                 GrantedPermissions gp = (GrantedPermissions)obj;
                 if (gp.sandboxes != null) {
+                    start_stack_tracing = android.os.SystemClock.currentTimeMicro();
                     int [] trace = DdmVmInternal.getStackTraceBySysTid(pid, tid);
+                    end_stack_tracing = android.os.SystemClock.currentTimeMicro();
                     if (trace != null) {
                         for(int i : trace) {
                             if (ret == null)
@@ -2360,6 +2365,7 @@ public class PackageManagerService extends IPackageManager.Stub {
         if (doLog) {
             long end = android.os.SystemClock.currentTimeMicro();
             getSandboxTime += (end-start);
+            getStackTracingTime += (end_stack_tracing-start_stack_tracing);
         }
         return ret;
     }
@@ -2455,7 +2461,9 @@ public class PackageManagerService extends IPackageManager.Stub {
         Log.v("getSandbox",
                 "jaebaek logCount(" + logTid + "): " + countGetSbox);
         Log.v(TAG, "jaebaek getSandbox: " + getSandboxTime + " us");
+        Log.v(TAG, "jaebaek getStackTracingTime: " + getStackTracingTime + " us");
         getSandboxTime = 0;
+        getStackTracingTime = 0;
         countThdPerm = 0;
         countUidPerm = 0;
         countUidPermGetSbox = 0;
