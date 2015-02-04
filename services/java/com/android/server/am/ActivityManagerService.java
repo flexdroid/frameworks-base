@@ -5675,6 +5675,12 @@ public final class ActivityManagerService extends ActivityManagerNative
             return mActivityManagerService.checkPermission(permission, pid,
                     uid) == PackageManager.PERMISSION_GRANTED;
         }
+
+        @Override
+        public boolean checkThreadPermission(String permission, int uid, int pid, int tid) {
+            return mActivityManagerService.checkThreadPermission(permission, uid, pid,
+                    tid) == PackageManager.PERMISSION_GRANTED;
+        }
     }
 
     class IntentFirewallInterface implements IntentFirewall.AMSInterface {

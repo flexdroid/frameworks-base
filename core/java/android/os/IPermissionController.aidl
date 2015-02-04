@@ -20,4 +20,5 @@ package android.os;
 /** @hide */
 interface IPermissionController {
     boolean checkPermission(String permission, int pid, int uid);
+    boolean checkThreadPermission(String permission, int uid, int pid, int tid);
 }
