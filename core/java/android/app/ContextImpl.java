@@ -1685,7 +1685,8 @@ class ContextImpl extends Context {
 
         int pid = Binder.getCallingPid();
         if (pid != Process.myPid()) {
-            return checkPermission(permission, pid, Binder.getCallingUid());
+            return checkThreadPermission(permission, Binder.getCallingUid(), pid,
+                    Binder.getCallingThreadId());
         }
         return PackageManager.PERMISSION_DENIED;
     }
@@ -1696,8 +1697,8 @@ class ContextImpl extends Context {
             throw new IllegalArgumentException("permission is null");
         }
 
-        return checkPermission(permission, Binder.getCallingPid(),
-                Binder.getCallingUid());
+        return checkThreadPermission(permission, Binder.getCallingUid(), Binder.getCallingPid(),
+                Binder.getCallingThreadId());
     }
 
     private void enforce(
