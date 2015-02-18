@@ -490,7 +490,7 @@ public class LocationManagerService extends ILocationManager.Stub {
         int mPendingBroadcasts;
         PowerManager.WakeLock mWakeLock;
 
-        Receiver(ILocationListener listener, PendingIntent intent, int pid, int uid,
+        Receiver(ILocationListener listener, PendingIntent intent, int uid, int pid, int tid,
                 String packageName, WorkSource workSource, boolean hideFromAppOps) {
             mListener = listener;
             mPendingIntent = intent;
@@ -499,7 +499,7 @@ public class LocationManagerService extends ILocationManager.Stub {
             } else {
                 mKey = intent;
             }
-            mAllowedResolutionLevel = getAllowedResolutionLevel(pid, uid);
+            mAllowedResolutionLevel = getAllowedResolutionLevel(uid, pid, tid);
             mUid = uid;
             mPid = pid;
             mPackageName = packageName;
@@ -890,12 +890,12 @@ public class LocationManagerService extends ILocationManager.Stub {
      * @param uid the UID
      * @return resolution level allowed to the pid/uid pair
      */
-    private int getAllowedResolutionLevel(int pid, int uid) {
-        if (mContext.checkPermission(android.Manifest.permission.ACCESS_FINE_LOCATION,
-                pid, uid) == PackageManager.PERMISSION_GRANTED) {
+    private int getAllowedResolutionLevel(int uid, int pid, int tid) {
+        if (mContext.checkThreadPermission(android.Manifest.permission.ACCESS_FINE_LOCATION,
+                uid, pid, tid) == PackageManager.PERMISSION_GRANTED) {
             return RESOLUTION_LEVEL_FINE;
-        } else if (mContext.checkPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION,
-                pid, uid) == PackageManager.PERMISSION_GRANTED) {
+        } else if (mContext.checkThreadPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                uid, pid, tid) == PackageManager.PERMISSION_GRANTED) {
             return RESOLUTION_LEVEL_COARSE;
         } else {
             return RESOLUTION_LEVEL_NONE;
@@ -908,7 +908,8 @@ public class LocationManagerService extends ILocationManager.Stub {
      * @return resolution level allowed to caller
      */
     private int getCallerAllowedResolutionLevel() {
-        return getAllowedResolutionLevel(Binder.getCallingPid(), Binder.getCallingUid());
+        return getAllowedResolutionLevel(Binder.getCallingUid(), Binder.getCallingPid(),
+                Binder.getCallingThreadId());
     }
 
     /**
@@ -1328,12 +1329,12 @@ public class LocationManagerService extends ILocationManager.Stub {
         }
     }
 
-    private Receiver getReceiverLocked(ILocationListener listener, int pid, int uid,
+    private Receiver getReceiverLocked(ILocationListener listener, int uid, int pid, int tid,
             String packageName, WorkSource workSource, boolean hideFromAppOps) {
         IBinder binder = listener.asBinder();
         Receiver receiver = mReceivers.get(binder);
         if (receiver == null) {
-            receiver = new Receiver(listener, null, pid, uid, packageName, workSource,
+            receiver = new Receiver(listener, null, uid, pid, tid, packageName, workSource,
                     hideFromAppOps);
             mReceivers.put(binder, receiver);
 
@@ -1347,11 +1348,11 @@ public class LocationManagerService extends ILocationManager.Stub {
         return receiver;
     }
 
-    private Receiver getReceiverLocked(PendingIntent intent, int pid, int uid, String packageName,
+    private Receiver getReceiverLocked(PendingIntent intent, int uid, int pid, int tid, String packageName,
             WorkSource workSource, boolean hideFromAppOps) {
         Receiver receiver = mReceivers.get(intent);
         if (receiver == null) {
-            receiver = new Receiver(null, intent, pid, uid, packageName, workSource,
+            receiver = new Receiver(null, intent, uid, pid, tid, packageName, workSource,
                     hideFromAppOps);
             mReceivers.put(intent, receiver);
         }
@@ -1414,16 +1415,16 @@ public class LocationManagerService extends ILocationManager.Stub {
     }
 
     private Receiver checkListenerOrIntentLocked(ILocationListener listener, PendingIntent intent,
-            int pid, int uid, String packageName, WorkSource workSource, boolean hideFromAppOps) {
+            int uid, int pid, int tid, String packageName, WorkSource workSource, boolean hideFromAppOps) {
         if (intent == null && listener == null) {
             throw new IllegalArgumentException("need either listener or intent");
         } else if (intent != null && listener != null) {
             throw new IllegalArgumentException("cannot register both listener and intent");
         } else if (intent != null) {
             checkPendingIntent(intent);
-            return getReceiverLocked(intent, pid, uid, packageName, workSource, hideFromAppOps);
+            return getReceiverLocked(intent, uid, pid, tid, packageName, workSource, hideFromAppOps);
         } else {
-            return getReceiverLocked(listener, pid, uid, packageName, workSource, hideFromAppOps);
+            return getReceiverLocked(listener, uid, pid, tid, packageName, workSource, hideFromAppOps);
         }
     }
 
@@ -1447,6 +1448,7 @@ public class LocationManagerService extends ILocationManager.Stub {
 
         final int pid = Binder.getCallingPid();
         final int uid = Binder.getCallingUid();
+        final int tid = Binder.getCallingThreadId();
         // providers may use public location API's, need to clear identity
         long identity = Binder.clearCallingIdentity();
         try {
@@ -1455,7 +1457,7 @@ public class LocationManagerService extends ILocationManager.Stub {
             checkLocationAccess(uid, packageName, allowedResolutionLevel);
 
             synchronized (mLock) {
-                Receiver recevier = checkListenerOrIntentLocked(listener, intent, pid, uid,
+                Receiver recevier = checkListenerOrIntentLocked(listener, intent, uid, pid, tid,
                         packageName, workSource, hideFromAppOps);
                 requestLocationUpdatesLocked(sanitizedRequest, recevier, pid, uid, packageName);
             }
@@ -1506,11 +1508,12 @@ public class LocationManagerService extends ILocationManager.Stub {
 
         final int pid = Binder.getCallingPid();
         final int uid = Binder.getCallingUid();
+        final int tid = Binder.getCallingThreadId();
 
         synchronized (mLock) {
             WorkSource workSource = null;
             boolean hideFromAppOps = false;
-            Receiver receiver = checkListenerOrIntentLocked(listener, intent, pid, uid,
+            Receiver receiver = checkListenerOrIntentLocked(listener, intent, uid, pid, tid,
                     packageName, workSource, hideFromAppOps);
 
             // providers may use public location API's, need to clear identity
