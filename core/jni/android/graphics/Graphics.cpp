@@ -10,6 +10,8 @@
 #include "SkRegion.h"
 #include <android_runtime/AndroidRuntime.h>
 
+int register_android_graphics_Graphics(JNIEnv* env);
+
 void doThrowNPE(JNIEnv* env) {
     jniThrowNullPointerException(env, NULL);
 }
@@ -179,6 +181,7 @@ static jmethodID gRegion_constructorMethodID;
 void GraphicsJNI::get_jrect(JNIEnv* env, jobject obj, int* L, int* T, int* R, int* B)
 {
     SkASSERT(env->IsInstanceOf(obj, gRect_class));
+    if (!gRect_leftFieldID) register_android_graphics_Graphics(env);
 
     *L = env->GetIntField(obj, gRect_leftFieldID);
     *T = env->GetIntField(obj, gRect_topFieldID);
@@ -189,6 +192,7 @@ void GraphicsJNI::get_jrect(JNIEnv* env, jobject obj, int* L, int* T, int* R, in
 void GraphicsJNI::set_jrect(JNIEnv* env, jobject obj, int L, int T, int R, int B)
 {
     SkASSERT(env->IsInstanceOf(obj, gRect_class));
+    if (!gRect_leftFieldID) register_android_graphics_Graphics(env);
 
     env->SetIntField(obj, gRect_leftFieldID, L);
     env->SetIntField(obj, gRect_topFieldID, T);
@@ -199,6 +203,7 @@ void GraphicsJNI::set_jrect(JNIEnv* env, jobject obj, int L, int T, int R, int B
 SkIRect* GraphicsJNI::jrect_to_irect(JNIEnv* env, jobject obj, SkIRect* ir)
 {
     SkASSERT(env->IsInstanceOf(obj, gRect_class));
+    if (!gRect_leftFieldID) register_android_graphics_Graphics(env);
 
     ir->set(env->GetIntField(obj, gRect_leftFieldID),
             env->GetIntField(obj, gRect_topFieldID),
@@ -210,6 +215,7 @@ SkIRect* GraphicsJNI::jrect_to_irect(JNIEnv* env, jobject obj, SkIRect* ir)
 void GraphicsJNI::irect_to_jrect(const SkIRect& ir, JNIEnv* env, jobject obj)
 {
     SkASSERT(env->IsInstanceOf(obj, gRect_class));
+    if (!gRect_leftFieldID) register_android_graphics_Graphics(env);
 
     env->SetIntField(obj, gRect_leftFieldID, ir.fLeft);
     env->SetIntField(obj, gRect_topFieldID, ir.fTop);
@@ -220,6 +226,7 @@ void GraphicsJNI::irect_to_jrect(const SkIRect& ir, JNIEnv* env, jobject obj)
 SkRect* GraphicsJNI::jrectf_to_rect(JNIEnv* env, jobject obj, SkRect* r)
 {
     SkASSERT(env->IsInstanceOf(obj, gRectF_class));
+    if (!gRect_leftFieldID) register_android_graphics_Graphics(env);
 
     r->set(SkFloatToScalar(env->GetFloatField(obj, gRectF_leftFieldID)),
            SkFloatToScalar(env->GetFloatField(obj, gRectF_topFieldID)),
@@ -231,6 +238,7 @@ SkRect* GraphicsJNI::jrectf_to_rect(JNIEnv* env, jobject obj, SkRect* r)
 SkRect* GraphicsJNI::jrect_to_rect(JNIEnv* env, jobject obj, SkRect* r)
 {
     SkASSERT(env->IsInstanceOf(obj, gRect_class));
+    if (!gRect_leftFieldID) register_android_graphics_Graphics(env);
 
     r->set(SkIntToScalar(env->GetIntField(obj, gRect_leftFieldID)),
            SkIntToScalar(env->GetIntField(obj, gRect_topFieldID)),
@@ -242,6 +250,7 @@ SkRect* GraphicsJNI::jrect_to_rect(JNIEnv* env, jobject obj, SkRect* r)
 void GraphicsJNI::rect_to_jrectf(const SkRect& r, JNIEnv* env, jobject obj)
 {
     SkASSERT(env->IsInstanceOf(obj, gRectF_class));
+    if (!gRect_leftFieldID) register_android_graphics_Graphics(env);
 
     env->SetFloatField(obj, gRectF_leftFieldID, SkScalarToFloat(r.fLeft));
     env->SetFloatField(obj, gRectF_topFieldID, SkScalarToFloat(r.fTop));
@@ -252,6 +261,7 @@ void GraphicsJNI::rect_to_jrectf(const SkRect& r, JNIEnv* env, jobject obj)
 SkIPoint* GraphicsJNI::jpoint_to_ipoint(JNIEnv* env, jobject obj, SkIPoint* point)
 {
     SkASSERT(env->IsInstanceOf(obj, gPoint_class));
+    if (!gPointF_xFieldID) register_android_graphics_Graphics(env);
 
     point->set(env->GetIntField(obj, gPoint_xFieldID),
                env->GetIntField(obj, gPoint_yFieldID));
@@ -261,6 +271,7 @@ SkIPoint* GraphicsJNI::jpoint_to_ipoint(JNIEnv* env, jobject obj, SkIPoint* poin
 void GraphicsJNI::ipoint_to_jpoint(const SkIPoint& ir, JNIEnv* env, jobject obj)
 {
     SkASSERT(env->IsInstanceOf(obj, gPoint_class));
+    if (!gPointF_xFieldID) register_android_graphics_Graphics(env);
 
     env->SetIntField(obj, gPoint_xFieldID, ir.fX);
     env->SetIntField(obj, gPoint_yFieldID, ir.fY);
@@ -269,6 +280,7 @@ void GraphicsJNI::ipoint_to_jpoint(const SkIPoint& ir, JNIEnv* env, jobject obj)
 SkPoint* GraphicsJNI::jpointf_to_point(JNIEnv* env, jobject obj, SkPoint* point)
 {
     SkASSERT(env->IsInstanceOf(obj, gPointF_class));
+    if (!gPointF_xFieldID) register_android_graphics_Graphics(env);
 
     point->set(SkFloatToScalar(env->GetIntField(obj, gPointF_xFieldID)),
                SkFloatToScalar(env->GetIntField(obj, gPointF_yFieldID)));
@@ -278,6 +290,7 @@ SkPoint* GraphicsJNI::jpointf_to_point(JNIEnv* env, jobject obj, SkPoint* point)
 void GraphicsJNI::point_to_jpointf(const SkPoint& r, JNIEnv* env, jobject obj)
 {
     SkASSERT(env->IsInstanceOf(obj, gPointF_class));
+    if (!gPointF_xFieldID) register_android_graphics_Graphics(env);
 
     env->SetFloatField(obj, gPointF_xFieldID, SkScalarToFloat(r.fX));
     env->SetFloatField(obj, gPointF_yFieldID, SkScalarToFloat(r.fY));
@@ -287,6 +300,7 @@ SkBitmap* GraphicsJNI::getNativeBitmap(JNIEnv* env, jobject bitmap) {
     SkASSERT(env);
     SkASSERT(bitmap);
     SkASSERT(env->IsInstanceOf(bitmap, gBitmap_class));
+    if (!gBitmap_nativeInstanceID) register_android_graphics_Graphics(env);
     SkBitmap* b = (SkBitmap*)env->GetIntField(bitmap, gBitmap_nativeInstanceID);
     SkASSERT(b);
     return b;
@@ -299,6 +313,7 @@ SkBitmap::Config GraphicsJNI::getNativeBitmapConfig(JNIEnv* env,
         return SkBitmap::kNo_Config;
     }
     SkASSERT(env->IsInstanceOf(jconfig, gBitmapConfig_class));
+    if (!gBitmapConfig_nativeInstanceID) register_android_graphics_Graphics(env);
     int c = env->GetIntField(jconfig, gBitmapConfig_nativeInstanceID);
     if (c < 0 || c >= SkBitmap::kConfigCount) {
         c = SkBitmap::kNo_Config;
@@ -310,6 +325,7 @@ SkCanvas* GraphicsJNI::getNativeCanvas(JNIEnv* env, jobject canvas) {
     SkASSERT(env);
     SkASSERT(canvas);
     SkASSERT(env->IsInstanceOf(canvas, gCanvas_class));
+    if (!gCanvas_nativeInstanceID) register_android_graphics_Graphics(env);
     SkCanvas* c = (SkCanvas*)env->GetIntField(canvas, gCanvas_nativeInstanceID);
     SkASSERT(c);
     return c;
@@ -319,6 +335,7 @@ SkPaint* GraphicsJNI::getNativePaint(JNIEnv* env, jobject paint) {
     SkASSERT(env);
     SkASSERT(paint);
     SkASSERT(env->IsInstanceOf(paint, gPaint_class));
+    if (!gPaint_nativeInstanceID) register_android_graphics_Graphics(env);
     SkPaint* p = (SkPaint*)env->GetIntField(paint, gPaint_nativeInstanceID);
     SkASSERT(p);
     return p;
@@ -329,6 +346,7 @@ SkPicture* GraphicsJNI::getNativePicture(JNIEnv* env, jobject picture)
     SkASSERT(env);
     SkASSERT(picture);
     SkASSERT(env->IsInstanceOf(picture, gPicture_class));
+    if (!gPicture_nativeInstanceID) register_android_graphics_Graphics(env);
     SkPicture* p = (SkPicture*)env->GetIntField(picture, gPicture_nativeInstanceID);
     SkASSERT(p);
     return p;
@@ -339,6 +357,7 @@ SkRegion* GraphicsJNI::getNativeRegion(JNIEnv* env, jobject region)
     SkASSERT(env);
     SkASSERT(region);
     SkASSERT(env->IsInstanceOf(region, gRegion_class));
+    if (!gRegion_nativeInstanceID) register_android_graphics_Graphics(env);
     SkRegion* r = (SkRegion*)env->GetIntField(region, gRegion_nativeInstanceID);
     SkASSERT(r);
     return r;
@@ -668,6 +687,7 @@ int register_android_graphics_Graphics(JNIEnv* env)
 
     gBitmap_class = make_globalref(env, "android/graphics/Bitmap");
     gBitmap_nativeInstanceID = getFieldIDCheck(env, gBitmap_class, "mNativeBitmap", "I");
+    ALOGE("gBitmap_nativeInstanceID = %p\n", gBitmap_nativeInstanceID);
     gBitmap_constructorMethodID = env->GetMethodID(gBitmap_class, "<init>", "(I[BIIIZZ[B[I)V");
     gBitmap_reinitMethodID = env->GetMethodID(gBitmap_class, "reinit", "(IIZ)V");
     gBitmap_getAllocationByteCountMethodID = env->GetMethodID(gBitmap_class, "getAllocationByteCount", "()I");

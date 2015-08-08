@@ -2346,10 +2346,12 @@ public class PackageManagerService extends IPackageManager.Stub {
                     end_stack_tracing = android.os.SystemClock.currentTimeMicro();
                     if (trace != null) {
                         for(int i : trace) {
-                            if (ret == null)
-                                ret = new HashSet<String>(gp.sandboxes.get(i));
-                            else
-                                ret.retainAll(gp.sandboxes.get(i));
+                            if (gp.sandboxes.get(i) != null) {
+                                if (ret == null)
+                                    ret = new HashSet<String>(gp.sandboxes.get(i));
+                                else
+                                    ret.retainAll(gp.sandboxes.get(i));
+                            }
                         }
                     } else {
                         String [] pkgs = getPackagesForUid(uid);
