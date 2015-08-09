@@ -318,6 +318,9 @@ status_t ConvertKeyValueArraysToMessage(
             return -EINVAL;
         }
 
+        if (keyObj == NULL) {
+            return -ENOMEM;
+        }
         const char *tmp = env->GetStringUTFChars((jstring)keyObj, NULL);
 
         if (tmp == NULL) {
@@ -332,6 +335,9 @@ status_t ConvertKeyValueArraysToMessage(
         jobject valueObj = env->GetObjectArrayElement(values, i);
 
         if (env->IsInstanceOf(valueObj, stringClass.get())) {
+            if (valueObj == NULL) {
+                return -ENOMEM;
+            }
             const char *value = env->GetStringUTFChars((jstring)valueObj, NULL);
 
             if (value == NULL) {
@@ -414,4 +420,3 @@ status_t ConvertKeyValueArraysToMessage(
 }
 
 }  // namespace android
-
